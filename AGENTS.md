@@ -97,7 +97,7 @@ Each interaction runs through `agent/conversation_loop.py` using modular step ha
 | `acp_adapter/` | Agent Client Protocol (ACP) server implementation for IDE editor integration. |
 | `skills/`, `optional-skills/` | Curated skill definitions and SOP playbooks. |
 | `scripts/` | Developer tooling (`scripts/check`, `scripts/run_tests.sh`, code health linters). |
-| `website/docs/developer-guide/` | Comprehensive technical architecture and subsystem documentation. |
+| `docs/harness/` | Comprehensive Harness deep-dive architecture and developer implementation notes. |
 
 ---
 
@@ -156,8 +156,8 @@ hermes pm lock             # Re-resolve and update uv.lock after editing pyproje
 - `hermes_state.py`: SQLite session database with WAL mode, epoch fencing, and crash-recovery handlers.
 - `hermes_constants.py`: Profile-aware path and environment resolution.
 - `gateway/run.py`: Messaging gateway runner managing platform multiplexing, single-writer sockets, and dual message guards.
-- `website/docs/developer-guide/harness-deep-dive.md`: Comprehensive theoretical deep dive into AI agent harness design.
-- `website/docs/developer-guide/harness-developer-notes.md`: Concrete implementation specifications, parameters, and architectural decisions.
+- `docs/harness/harness-deep-dive.md`: Comprehensive theoretical deep dive into AI agent harness design.
+- `docs/harness/harness-developer-notes.md`: Concrete implementation specifications, parameters, and architectural decisions.
 
 ---
 

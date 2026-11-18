@@ -5,7 +5,6 @@
 # Hermes Agent ☤ (AI Agent Harness 源码分析与学习工程)
 
 <p align="center">
-  <a href="https://hermes-agent.nousresearch.com/docs/"><img src="https://img.shields.io/badge/Docs-hermes--agent.nousresearch.com-FFD700?style=for-the-badge" alt="Documentation"></a>
   <a href="https://discord.gg/NousResearch"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
   <a href="https://github.com/NousResearch/hermes-agent/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
   <a href="https://nousresearch.com"><img src="https://img.shields.io/badge/Built%20by-Nous%20Research-blueviolet?style=for-the-badge" alt="Built by Nous Research"></a>
@@ -24,8 +23,8 @@
 | 文档 | 路径 | 核心内容 |
 |---|---|---|
 | **代码库工作指南** | [AGENTS.md](AGENTS.md) | 仓库核心架构、单核窄腰原则、9 步回合状态机、消息流不变式与测试规范 |
-| **Harness 架构深度解析** | [harness-deep-dive.md](website/docs/developer-guide/harness-deep-dive.md) | 从操作系统视角深度剖析调度器、前缀缓存、内存分页、系统调用与单写权威 |
-| **开发者实施手册** | [harness-developer-notes.md](website/docs/developer-guide/harness-developer-notes.md) | 10 个核心子系统的工程决策、实现规格（带生产级基线参数）与避坑指南 |
+| **Harness 架构深度解析** | [harness-deep-dive.md](docs/harness/harness-deep-dive.md) | 从操作系统视角深度剖析调度器、前缀缓存、内存分页、系统调用与单写权威 |
+| **开发者实施手册** | [harness-developer-notes.md](docs/harness/harness-developer-notes.md) | 10 个核心子系统的工程决策、实现规格（带生产级基线参数）与避坑指南 |
 
 ---
 
@@ -89,7 +88,7 @@ hermes doctor       # 环境与依赖健康诊断
 - `gateway/`: 消息网关与多平台适配器，统一接入与单写者仲裁。
 - `tui_gateway/` & `ui-tui/`: 终端用户界面（TUI）的 JSON-RPC 接入层。
 - `apps/desktop/`: 基于 Electron 的桌面客户端桥接。
-- `website/docs/developer-guide/`: 开发者长篇文档与架构沉淀。
+- `docs/harness/`: Harness 核心架构深度分析与开发者实施笔记。
 
 ---
 
