@@ -179,6 +179,9 @@ python scripts/check
   - **五层垂直架构与自学习闭环**：Layer 1~5 深度拆解（6 级配置优先级、多维预算安全阀、47+ 内置工具分类、三级审批流、6 类执行沙箱）与四阶段自学习闭环（执行 $\rightarrow$ 评估 $\rightarrow$ 创建 $\rightarrow$ 改进、三级渐进技能加载与四级信任边界）。
   - **四层温度记忆系统详解**：热记忆（会话上下文与 `/compress`）、温记忆（`MEMORY.md` 2200c / `USER.md` 1375c 有界记忆哲学与启动冻结契约）、冷记忆（SQLite FTS5 BM25 按需检索与摘要闭环）、外部记忆（Honcho 三层认知建模、Mem0/OpenViking 等 8 大插件、`_redact_for_provider` 出站强制脱敏与 `_StuckCallGate` 慢调用熔断）及 `SOUL.md` 协同规范。
   - **12 大子系统工程决策矩阵与排障手册**：12 大模块“痛点 $\rightarrow$ 决策 $\rightarrow$ 规格 $\rightarrow$ 红线”全景速查表与 5 类高频故障排查 Runbook。
+- 🧭 **[源码学习与阅读规划指南 (docs/harness/source-code-reading-roadmap.md)](docs/harness/source-code-reading-roadmap.md)**（**按图索骥读透 300+ 文件**）：
+  - 严格对齐 `harness-developer-notes.md`，提供“由内向外 + 15% 主干代码法”的 **Stage 0 $\rightarrow$ Stage 5** 渐进式精读路线（支持 **3 天速通** / **14 天深度精读**双模式）。
+  - 给出每一阶段的必读主干文件、精准符号与断点位置、首次阅读跳过清单、窄范围契约测试命令、通关自测题与 4 个动手实战微实验。
 - 📋 **[仓库工作指南 (AGENTS.md)](AGENTS.md)**：
   - 完整的系统架构图、数据流图、开发规范与测试契约。
 ---

@@ -448,12 +448,12 @@ _RAW_INLINE_TOOL_EXECUTORS["inspect_runtime"] = _inspect_runtime_state
 
 ## 8. 系列导航与架构专栏
 
-- 📘 **[卷一：核心编排回路与快速上手指南 (`01_core_loop_and_quickstart.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/01_core_loop_and_quickstart.md)**（当前篇）
-- 📗 **[卷二：提示词工程、上下文压缩与多层记忆体系 (`02_prompt_context_and_memory.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/02_prompt_context_and_memory.md)**
-- 📙 **[卷三：工具系统、编程式代码卸载与子智能体编排 (`03_tools_execution_and_subagents.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/03_tools_execution_and_subagents.md)**
-- 📕 **[卷四：多模型适配、网关单写权威、容灾自愈与纵深防御 (`04_providers_gateway_disaster_recovery_and_security.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/04_providers_gateway_disaster_recovery_and_security.md)**
+- 📘 **[卷一：核心编排回路与快速上手指南 (`01_core_loop_and_quickstart.md`)](./01_core_loop_and_quickstart.md)**（当前篇）
+- 📗 **[卷二：提示词工程、上下文压缩与多层记忆体系 (`02_prompt_context_and_memory.md`)](./02_prompt_context_and_memory.md)**
+- 📙 **[卷三：工具系统、编程式代码卸载与子智能体编排 (`03_tools_execution_and_subagents.md`)](./03_tools_execution_and_subagents.md)**
+- 📕 **[卷四：多模型适配、网关单写权威、容灾自愈与纵深防御 (`04_providers_gateway_disaster_recovery_and_security.md`)](./04_providers_gateway_disaster_recovery_and_security.md)**
 
 进阶专题延伸：
-- 🧠 **[Harness 架构理论深度解析 (`harness-deep-dive.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/harness-deep-dive.md)**：操作系统类比（CPU ALU vs OS Kernel）与核心子系统深度剖析。
-- 🛠️ **[Harness 开发者实施手册 (`harness-developer-notes.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/harness-developer-notes.md)**：开发公理与 10 个子系统的工程决策及避坑速查表。
-- 📋 **[仓库工作指南 (`AGENTS.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/AGENTS.md)**：架构总览、核心不变式与代码质量规则。
+- 🧠 **[Harness 架构理论深度解析 (`harness-deep-dive.md`)](./harness-deep-dive.md)**：操作系统类比（CPU ALU vs OS Kernel）与核心子系统深度剖析。
+- 🛠️ **[Harness 开发者实施手册 (`harness-developer-notes.md`)](./harness-developer-notes.md)**：开发公理与 10 个子系统的工程决策及避坑速查表。
+- 📋 **[仓库工作指南 (`AGENTS.md`)](../../AGENTS.md)**：架构总览、核心不变式与代码质量规则。

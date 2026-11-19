@@ -217,11 +217,11 @@ flowchart TD
 
 至此，**AI Agent Harness 开发者四卷专栏**全部编写完成：
 
-- 📘 **[卷一：核心编排回路与快速上手指南 (`01_core_loop_and_quickstart.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/01_core_loop_and_quickstart.md)**
+- 📘 **[卷一：核心编排回路与快速上手指南 (`01_core_loop_and_quickstart.md`)](./01_core_loop_and_quickstart.md)**
   - 无状态内核与单核窄腰范式、9 步回合状态机生命周期、180 行最小可用闭环（Minimal Viable Harness）从零实现与单步断点调试。
-- 📗 **[卷二：提示词工程、上下文压缩与多层记忆体系 (`02_prompt_context_and_memory.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/02_prompt_context_and_memory.md)**
+- 📗 **[卷二：提示词工程、上下文压缩与多层记忆体系 (`02_prompt_context_and_memory.md`)](./02_prompt_context_and_memory.md)**
   - 三层静态提示词组装保活前缀缓存（Prefix Cache）、增量微压缩折叠大工具输出、四阶段深度总结与 L1-L3 多层记忆自演进闭环。
-- 📙 **[卷三：工具系统、编程式代码卸载与子智能体编排 (`03_tools_execution_and_subagents.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/03_tools_execution_and_subagents.md)**
+- 📙 **[卷三：工具系统、编程式代码卸载与子智能体编排 (`03_tools_execution_and_subagents.md`)](./03_tools_execution_and_subagents.md)**
   - 双轨制工具调度（公开注册表 vs 有状态内联拦截）、`ThreadPoolExecutor` 并发与串行屏障、Programmatic Tool Calling（PTC）编程式认知卸载、基于 Git Worktree 和独立上下文的子智能体隔离。
-- 📕 **[卷四：多模型适配、网关单写权威、容灾自愈与纵深防御 (`04_providers_gateway_disaster_recovery_and_security.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/04_providers_gateway_disaster_recovery_and_security.md)**（当前篇）
+- 📕 **[卷四：多模型适配、网关单写权威、容灾自愈与纵深防御 (`04_providers_gateway_disaster_recovery_and_security.md`)](./04_providers_gateway_disaster_recovery_and_security.md)**（当前篇）
   - 规范中间表示（Canonical IR）、Socket 级 `shutdown` 安全中断强杀、`gateway.sock` 单写权威与 Epoch 隔离栅栏、SQLite WAL 容灾与 FTS5 自愈、8 层纵深安全防御。

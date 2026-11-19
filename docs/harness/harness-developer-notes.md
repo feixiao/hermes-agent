@@ -1,6 +1,6 @@
 # Harness 开发者实施手册：缰绳工程演进、五层核心架构、四层温度记忆与工程决策规格
 
-> **文档定位**：本文是与《[AI Agent Harness 架构与工程实现全景解析 (`harness-deep-dive.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/harness-deep-dive.md)》配套的**工程实施与深度实战手册**。它系统整合了 **Hermes 诞生与“缰绳工程”（Harness Engineering）演进哲学**、**五层垂直架构深度拆解与自学习闭环**、**四层温度记忆系统（热/温/冷/外部记忆与 Honcho 用户建模）详解**，以及 **12 大核心子系统的“痛点 $\rightarrow$ 决策 $\rightarrow$ 实现规格 $\rightarrow$ 避坑指南”与排障手册（Troubleshooting Runbook）**。所有设计原则与参数规格均严格对齐 Nous Research Hermes Agent 生产代码库。
+> **文档定位**：本文是与《[AI Agent Harness 架构与工程实现全景解析 (`harness-deep-dive.md`)](./harness-deep-dive.md)》配套的**工程实施与深度实战手册**。它系统整合了 **Hermes 诞生与“缰绳工程”（Harness Engineering）演进哲学**、**五层垂直架构深度拆解与自学习闭环**、**四层温度记忆系统（热/温/冷/外部记忆与 Honcho 用户建模）详解**，以及 **12 大核心子系统的“痛点 $\rightarrow$ 决策 $\rightarrow$ 实现规格 $\rightarrow$ 避坑指南”与排障手册（Troubleshooting Runbook）**。所有设计原则与参数规格均严格对齐 Nous Research Hermes Agent 生产代码库。
 
 ---
 
@@ -510,8 +510,9 @@ flowchart LR
 
 ## 六、 配套文档全景导航
 
-- 🌐 **[AI Agent Harness 架构与工程实现全景总纲 (`harness-deep-dive.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/harness-deep-dive.md)**：一文通览 CPU ALU vs Agent OS Kernel 对照矩阵、单核窄腰拓扑、9 步状态机、时序图与 20 大模块源码映射总表。
-- 📘 **[卷一：核心编排回路与快速上手指南 (`01_core_loop_and_quickstart.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/01_core_loop_and_quickstart.md)**：180 行零依赖可运行最小可用 Harness 原型实现与 `debug_harness.py` 单步断点调试实战。
-- 📗 **[卷二：提示词工程、上下文压缩与多层记忆体系 (`02_prompt_context_and_memory.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/02_prompt_context_and_memory.md)**：三层提示词代码走读、微压缩与 4 阶段压缩内部实现、L1-L3 记忆与 Curator 状态机细节。
-- 📙 **[卷三：工具系统、编程式代码卸载与子智能体编排 (`03_tools_execution_and_subagents.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/03_tools_execution_and_subagents.md)**：`@registry.register` Schema 抽取、内联拦截器、PTC Unix Socket RPC 协议与 Subagent 四重隔离细节。
-- 📕 **[卷四：多模型适配、网关单写权威、容灾自愈与纵深防御 (`04_providers_gateway_disaster_recovery_and_security.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/04_providers_gateway_disaster_recovery_and_security.md)**：Canonical IR 出站转换、`shutdown(SHUT_RDWR)` 底层机制、`gateway.sock` 并发控制、SQLite 自愈流程与 8 层防御代码实现。
+- 🌐 **[AI Agent Harness 架构与工程实现全景总纲 (`harness-deep-dive.md`)](./harness-deep-dive.md)**：一文通览 CPU ALU vs Agent OS Kernel 对照矩阵、单核窄腰拓扑、9 步状态机、时序图与 20 大模块源码映射总表。
+- 📘 **[卷一：核心编排回路与快速上手指南 (`01_core_loop_and_quickstart.md`)](./01_core_loop_and_quickstart.md)**：180 行零依赖可运行最小可用 Harness 原型实现与 `debug_harness.py` 单步断点调试实战。
+- 📗 **[卷二：提示词工程、上下文压缩与多层记忆体系 (`02_prompt_context_and_memory.md`)](./02_prompt_context_and_memory.md)**：三层提示词代码走读、微压缩与 4 阶段压缩内部实现、L1-L3 记忆与 Curator 状态机细节。
+- 📙 **[卷三：工具系统、编程式代码卸载与子智能体编排 (`03_tools_execution_and_subagents.md`)](./03_tools_execution_and_subagents.md)**：`@registry.register` Schema 抽取、内联拦截器、PTC Unix Socket RPC 协议与 Subagent 四重隔离细节。
+- 📕 **[卷四：多模型适配、网关单写权威、容灾自愈与纵深防御 (`04_providers_gateway_disaster_recovery_and_security.md`)](./04_providers_gateway_disaster_recovery_and_security.md)**：Canonical IR 出站转换、`shutdown(SHUT_RDWR)` 底层机制、`gateway.sock` 并发控制、SQLite 自愈流程与 8 层防御代码实现。
+- 🧭 **[源码学习与阅读规划指南 (`source-code-reading-roadmap.md`)](./source-code-reading-roadmap.md)**：严格依据本手册拆解的 6 阶段源码精读路线（3 天速通 / 14 天精读）、主干文件清单、断点位置、契约测试命令与 4 个动手微实验。

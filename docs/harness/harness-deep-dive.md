@@ -573,13 +573,13 @@ flowchart TD
 
 本文提供完整的**全景架构蓝图**。若需查看**逐行可运行的最小内核原型代码（Minimal Viable Harness）**、**单步断点调试脚本**或各子系统的**专项代码走读与参数规程**，请直接跳转对应分卷：
 
-1. 📘 **[卷一：核心编排回路与快速上手指南 (`01_core_loop_and_quickstart.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/01_core_loop_and_quickstart.md)**
+1. 📘 **[卷一：核心编排回路与快速上手指南 (`01_core_loop_and_quickstart.md`)](./01_core_loop_and_quickstart.md)**
    - 包含 180 行零依赖可运行的 Minimal Viable Harness 完整 Python 实现、隔离调试环境配置、`debug_harness.py` 单步断点指南与自定义工具扩展演练。
-2. 📗 **[卷二：提示词工程、上下文压缩与多层记忆体系 (`02_prompt_context_and_memory.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/02_prompt_context_and_memory.md)**
+2. 📗 **[卷二：提示词工程、上下文压缩与多层记忆体系 (`02_prompt_context_and_memory.md`)](./02_prompt_context_and_memory.md)**
    - 深入剖析三层提示词代码结构、微压缩与 4 阶段压缩内部方法实现、L1-L3 记忆与 Curator 状态机细节。
-3. 📙 **[卷三：工具系统、编程式代码卸载与子智能体编排 (`03_tools_execution_and_subagents.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/03_tools_execution_and_subagents.md)**
+3. 📙 **[卷三：工具系统、编程式代码卸载与子智能体编排 (`03_tools_execution_and_subagents.md`)](./03_tools_execution_and_subagents.md)**
    - 深入剖析 `@registry.register` Schema 抽取、内联拦截器实现、PTC Unix Socket RPC 通信协议与 Subagent 隔离细节。
-4. 📕 **[卷四：多模型适配、网关单写权威、容灾自愈与纵深防御 (`04_providers_gateway_disaster_recovery_and_security.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/04_providers_gateway_disaster_recovery_and_security.md)**
+4. 📕 **[卷四：多模型适配、网关单写权威、容灾自愈与纵深防御 (`04_providers_gateway_disaster_recovery_and_security.md`)](./04_providers_gateway_disaster_recovery_and_security.md)**
    - 深入剖析 Canonical IR 出站转换、`shutdown(SHUT_RDWR)` 底层机制、`gateway.sock` 并发控制、SQLite 自愈流程与 8 层防御代码实现。
-5. 🛠️ **[Harness 开发者实施手册 (`harness-developer-notes.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/harness-developer-notes.md)**
+5. 🛠️ **[Harness 开发者实施手册 (`harness-developer-notes.md`)](./harness-developer-notes.md)**
    - 涵盖“缰绳工程（Harness Engineering）”演进与 OpenClaw 15 维对比、五层垂直架构与自学习闭环、四层温度记忆系统（热/温/冷/外部记忆与 Honcho 用户建模、`SOUL.md`/`USER.md`/`MEMORY.md` 协同规范）、12 大子系统“痛点 $\rightarrow$ 决策 $\rightarrow$ 规格 $\rightarrow$ 避坑红线”矩阵与高频故障排查 Runbook。
