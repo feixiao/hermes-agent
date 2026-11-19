@@ -137,25 +137,50 @@ python scripts/check
 
 ---
 
-## 📖 架构深度解析文档
+## 📖 Harness 架构与开发全景专栏
 
-深入学习 Harness 原理，请阅读本项目沉淀的专题架构文档：
+本项目沉淀了面向生产级 AI Agent Harness 框架从零研发与二次开发的四卷全景指南：
 
-- 🧠 **[Harness 架构深度解析 (docs/harness/harness-deep-dive.md)](docs/harness/harness-deep-dive.md)**：
-  - Model 与 Harness 的操作系统类比（CPU ALU vs OS Kernel）
-  - 单核窄腰（Narrow Waist）拓扑
-  - 9 步回合状态机生命周期与角色交替不变式
-  - 前缀缓存（Prefix Caching）与 4 阶段压缩策略
-  - 编程式工具卸载（`execute_code` RPC 机制）
-  - 单写权威（Single-Writer Authority）与 Epoch 栅栏
+1. 📘 **[卷一：核心编排回路与快速上手指南 (docs/harness/01_core_loop_and_quickstart.md)](docs/harness/01_core_loop_and_quickstart.md)**
+   - 无状态推理内核 vs 有状态控制底座，单核窄腰（Narrow Waist）范式与三大黄金不变式。
+   - 9 步回合状态机（Turn Lifecycle）生命周期与流式超时强杀机制。
+   - 180 行完整可执行的最小可用闭环（Minimal Viable Harness）从零实现。
+   - 本地开发环境隔离、单步断点调试脚本（`debug_harness.py`）与单模块契约测试实战。
+
+2. 📗 **[卷二：提示词工程、上下文压缩与多层记忆体系 (docs/harness/02_prompt_context_and_memory.md)](docs/harness/02_prompt_context_and_memory.md)**
+   - 三层静态提示词组装架构（Layer 1 静态、Layer 2 冻结、Layer 3 动态旁路）保活厂商前缀缓存（Prefix Caching）。
+   - 上下文窗口治理：大工具输出增量微压缩（Micro-Compaction）与 4 阶段深度总结压缩（带确定性滑动窗口降级）。
+   - L1-L3 多层记忆架构：L1 常驻用户画像、L2 会话级 FTS5 倒排检索、L3 技能自演进闭环（Curator）。
+
+3. 📙 **[卷三：工具系统、编程式代码卸载与子智能体编排 (docs/harness/03_tools_execution_and_subagents.md)](docs/harness/03_tools_execution_and_subagents.md)**
+   - 双轨制工具调度：公开注册表（`tools/registry.py`）vs 有状态内联拦截（`inline_tool_executors.py`）。
+   - `ThreadPoolExecutor` 受控并发调度、原始请求顺序严格对齐回填与串行屏障机制。
+   - 编程式认知卸载（Programmatic Tool Calling - PTC）：通过 Unix Socket RPC 将多步循环下放本地沙箱执行。
+   - 子智能体（Subagent）隔离编排：独立上下文、Git Worktree 工作区分支、停滞看门狗与深度防套娃熔断。
+
+4. 📕 **[卷四：多模型适配、网关单写权威、容灾自愈与纵深防御 (docs/harness/04_providers_gateway_disaster_recovery_and_security.md)](docs/harness/04_providers_gateway_disaster_recovery_and_security.md)**
+   - 规范中间表示（Canonical IR）与出站动态适配（OpenAI, Anthropic, Bedrock, Ollama）。
+   - 流式响应适配与多线程 FD 安全的套接字级中断强杀 `shutdown(SHUT_RDWR)`。
+   - 跨 25+ 平台多端接入架构：`gateway.sock` 单一写中枢与 `runtime_epoch` 隔离栅栏。
+   - SQLite WAL 持久化高并发设计与 FTS5 全文索引损坏自愈重建。
+   - 8 层纵深防御体系：硬性禁令（`HARDLINE_PATTERNS`）、人机审批门禁与沙箱敏感凭据剥离。
+
+---
+
+## 📚 进阶架构专题文档
+
+- 🧠 **[Harness 架构理论深度解析 (docs/harness/harness-deep-dive.md)](docs/harness/harness-deep-dive.md)**：
+  - 操作系统类比视角（CPU ALU vs OS Kernel）、内核拓扑与各子系统深度设计。
+  - 单核窄腰（Narrow Waist）拓扑与 9 步回合状态机生命周期。
+  - 前缀缓存（Prefix Caching）与 4 阶段压缩策略。
+  - 编程式工具卸载（`execute_code` RPC 机制）与单写权威（Single-Writer Authority）。
 
 - 🛠️ **[Harness 开发者实施手册 (docs/harness/harness-developer-notes.md)](docs/harness/harness-developer-notes.md)**：
-  - 10 个核心子系统的工程决策与实现规格参数
-  - 常见技术痛点与踩坑指南（避免 Prompt 分裂、死锁、状态污染）
+  - 10 个核心子系统的工程决策、实现规格参数与避坑公理。
+  - 常见技术痛点与踩坑指南（避免 Prompt 分裂、死锁、状态污染）。
 
 - 📋 **[仓库工作指南 (AGENTS.md)](AGENTS.md)**：
-  - 完整的系统架构图、数据流图、开发规范与测试契约
-
+  - 完整的系统架构图、数据流图、开发规范与测试契约。
 ---
 
 ## 许可证
