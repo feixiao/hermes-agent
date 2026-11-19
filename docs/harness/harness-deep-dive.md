@@ -582,4 +582,4 @@ flowchart TD
 4. 📕 **[卷四：多模型适配、网关单写权威、容灾自愈与纵深防御 (`04_providers_gateway_disaster_recovery_and_security.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/04_providers_gateway_disaster_recovery_and_security.md)**
    - 深入剖析 Canonical IR 出站转换、`shutdown(SHUT_RDWR)` 底层机制、`gateway.sock` 并发控制、SQLite 自愈流程与 8 层防御代码实现。
 5. 🛠️ **[Harness 开发者实施手册 (`harness-developer-notes.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/harness-developer-notes.md)**
-   - 面向日常开发与 Code Review 的“痛点 $\rightarrow$ 决策 $\rightarrow$ 避坑”速查 Checklist。
+   - 涵盖“缰绳工程（Harness Engineering）”演进与 OpenClaw 15 维对比、五层垂直架构与自学习闭环、四层温度记忆系统（热/温/冷/外部记忆与 Honcho 用户建模、`SOUL.md`/`USER.md`/`MEMORY.md` 协同规范）、12 大子系统“痛点 $\rightarrow$ 决策 $\rightarrow$ 规格 $\rightarrow$ 避坑红线”矩阵与高频故障排查 Runbook。

@@ -174,10 +174,11 @@ python scripts/check
   - **编排与上下文治理**：9 步回合状态机、Persist-Before-Execute、三层提示词 KV Cache 保活、微压缩与 4 阶段单次总结压缩（含滑动窗口降级）、L1-L3 记忆与 Curator 技能自演进状态机。
   - **执行、隔离与多模型**：双轨工具调度与串行屏障、PTC 本地 Socket RPC 卸载、6 类执行沙箱、子智能体四重隔离、Canonical IR 出站归一化与 FD 安全 `shutdown(SHUT_RDWR)` 强杀。
   - **权威、容灾、安全与全源码映射**：`gateway.sock` 单写权威、Epoch 纪元栅栏、入站双门禁、多端生态（CLI/TUI/Desktop/ACP/25+ IM/Cron）、SQLite WAL 两级损坏自愈、8 层纵深防御与 20 大模块源码全景映射总表。
-- 🛠️ **[Harness 开发者实施手册 (docs/harness/harness-developer-notes.md)](docs/harness/harness-developer-notes.md)**：
-  - 10 个核心子系统的工程决策、实现规格参数与避坑公理。
-  - 常见技术痛点与踩坑指南（避免 Prompt 分裂、死锁、状态污染）。
-
+- 🛠️ **[Harness 开发者实施手册 (docs/harness/harness-developer-notes.md)](docs/harness/harness-developer-notes.md)**（**范式演进、五层架构、四层温度记忆与避坑规格**）：
+  - **缰绳工程（Harness Engineering）演进**：传统 Prompt Engineering 四大局限、缰绳工程五层结构（指令/约束/反馈/记忆/编排）与 OpenClaw vs Hermes 15 维架构对比矩阵。
+  - **五层垂直架构与自学习闭环**：Layer 1~5 深度拆解（6 级配置优先级、多维预算安全阀、47+ 内置工具分类、三级审批流、6 类执行沙箱）与四阶段自学习闭环（执行 $\rightarrow$ 评估 $\rightarrow$ 创建 $\rightarrow$ 改进、三级渐进技能加载与四级信任边界）。
+  - **四层温度记忆系统详解**：热记忆（会话上下文与 `/compress`）、温记忆（`MEMORY.md` 2200c / `USER.md` 1375c 有界记忆哲学与启动冻结契约）、冷记忆（SQLite FTS5 BM25 按需检索与摘要闭环）、外部记忆（Honcho 三层认知建模、Mem0/OpenViking 等 8 大插件、`_redact_for_provider` 出站强制脱敏与 `_StuckCallGate` 慢调用熔断）及 `SOUL.md` 协同规范。
+  - **12 大子系统工程决策矩阵与排障手册**：12 大模块“痛点 $\rightarrow$ 决策 $\rightarrow$ 规格 $\rightarrow$ 红线”全景速查表与 5 类高频故障排查 Runbook。
 - 📋 **[仓库工作指南 (AGENTS.md)](AGENTS.md)**：
   - 完整的系统架构图、数据流图、开发规范与测试契约。
 ---
