@@ -386,7 +386,55 @@ python scripts/check
 
 ---
 
-## 6. 自检清单与常见陷阱
+## 6. 进阶演练：为 Harness 增加自定义扩展
+
+### 6.1 演练 1：增加一个无状态自定义工具
+在 `tools/` 目录下创建新模块（如 `tools/my_custom_tool.py`），使用 `@registry.register` 注册：
+
+```python
+# tools/my_custom_tool.py
+import subprocess
+from tools.registry import registry
+
+@registry.register(
+    name="query_git_status",
+    description="Query git status of the current workspace repository.",
+    category="system",
+)
+def query_git_status(short: bool = True) -> str:
+    """Run git status and return formatted output.
+    
+    Args:
+        short: If True, returns short-format git status (-s).
+    """
+    cmd = ["git", "status", "-s"] if short else ["git", "status"]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    if res.returncode != 0:
+        return f"Git error: {res.stderr}"
+    return res.stdout or "Working tree clean."
+```
+> **生效原理**：`tools/registry.py` 会在导入期自动自省提取该函数的参数类型注解与 docstring，在 `turn_request_assembly.py` 请求装配阶段自动转换为模型厂商兼容的 JSON Schema。
+
+### 6.2 演练 2：增加一个有状态内联工具（以只读用户环境为例）
+若工具需要直接感知或读取 `AIAgent` 实例的运行时内部状态，在 `agent/inline_tool_executors.py` 中挂载内联拦截执行器：
+
+```python
+# 1. 编写内联执行函数
+def _inspect_runtime_state(agent, args: dict, ctx: InlineToolContext) -> str:
+    return json.dumps({
+        "current_turn": getattr(agent, "_current_turn_id", None),
+        "session_id": getattr(agent, "session_id", None),
+        "messages_count": len(ctx.messages or []),
+        "model": agent.model,
+    })
+
+# 2. 挂载到 _RAW_INLINE_TOOL_EXECUTORS 路由映射表中
+_RAW_INLINE_TOOL_EXECUTORS["inspect_runtime"] = _inspect_runtime_state
+```
+
+---
+
+## 7. 自检清单与常见陷阱
 
 | 故障现象 | 根本原因 | 规避与修复方案 |
 |---|---|---|
@@ -398,9 +446,14 @@ python scripts/check
 
 ---
 
-## 7. 系列导航
+## 8. 系列导航与架构专栏
 
 - 📘 **[卷一：核心编排回路与快速上手指南 (`01_core_loop_and_quickstart.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/01_core_loop_and_quickstart.md)**（当前篇）
 - 📗 **[卷二：提示词工程、上下文压缩与多层记忆体系 (`02_prompt_context_and_memory.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/02_prompt_context_and_memory.md)**
 - 📙 **[卷三：工具系统、编程式代码卸载与子智能体编排 (`03_tools_execution_and_subagents.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/03_tools_execution_and_subagents.md)**
 - 📕 **[卷四：多模型适配、网关单写权威、容灾自愈与纵深防御 (`04_providers_gateway_disaster_recovery_and_security.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/04_providers_gateway_disaster_recovery_and_security.md)**
+
+进阶专题延伸：
+- 🧠 **[Harness 架构理论深度解析 (`harness-deep-dive.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/harness-deep-dive.md)**：操作系统类比（CPU ALU vs OS Kernel）与核心子系统深度剖析。
+- 🛠️ **[Harness 开发者实施手册 (`harness-developer-notes.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/docs/harness/harness-developer-notes.md)**：开发公理与 10 个子系统的工程决策及避坑速查表。
+- 📋 **[仓库工作指南 (`AGENTS.md`)](file:///Users/fx/wk/github/hermes-agent-0.23.2/AGENTS.md)**：架构总览、核心不变式与代码质量规则。

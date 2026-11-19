@@ -1,4 +1,3 @@
-# 04_hermes_agent_harness_deep_dive.md
 # 通用 AI Agent Harness 架构与工程实现深度解析（以 Nous Research Hermes Agent 为参考范本）
 
 ## 一、 什么是 AI Agent Harness：核心边界与“单核窄腰”范式

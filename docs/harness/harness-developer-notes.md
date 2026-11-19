@@ -1,4 +1,3 @@
-# 05_harness_developer_implementation_notes.md
 # Harness 开发者实施手册：模块技术问题的工程决策与实现规格
 
 > **文档定位**：面向从零实现生产级 AI Agent Harness 框架的开发者，梳理 10 个核心子系统的工程决策、实现规格与避坑指南。参数与架构原则直接萃取自 Nous Research Hermes Agent 的工程沉淀。
