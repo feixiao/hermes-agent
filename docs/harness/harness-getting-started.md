@@ -285,27 +285,27 @@ if __name__ == "__main__":
 sequenceDiagram
     autonumber
     actor User as 用户 / 上层前端
-    participant Loop as conversation_loop (状态机)
+    participant TurnLoop as conversation_loop (状态机)
     participant Pre as turn_preflight (检查)
     participant API as turn_api_call (流式调用)
     participant Tool as turn_tool_round (工具派发)
     participant Compact as turn_context_compaction (压缩)
     participant DB as hermes_state (SQLite WAL)
 
-    User->>Loop: 发起请求 (run_conversation)
-    Loop->>Pre: 1. 检查预算、Epoch 锁与 _interrupt_requested
-    Loop->>API: 2. 请求组装并向 Provider 发起流式 API
+    User->>TurnLoop: 发起请求 (run_conversation)
+    TurnLoop->>Pre: 1. 检查预算、Epoch 锁与 _interrupt_requested
+    TurnLoop->>API: 2. 请求组装并向 Provider 发起流式 API
     API-->>User: 逐字回传文本 Token (流式监听)
-    API->>Loop: 3. Intake 抽取 tool_calls
+    API->>TurnLoop: 3. Intake 抽取 tool_calls
     alt 包含 tool_calls
-        Loop->>DB: 4. 持久化前置 (Persist Assistant Message)
-        Loop->>Tool: 5. 内联拦截 / 线程池并发执行工具
+        TurnLoop->>DB: 4. 持久化前置 (Persist Assistant Message)
+        TurnLoop->>Tool: 5. 内联拦截 / 线程池并发执行工具
         Tool->>DB: 6. 落盘 Tool 结果消息
-        Loop->>Compact: 7. 检测上下文长度 (触发增量微压缩)
-        Loop->>Loop: 回到步骤 1 继续下一迭代
+        TurnLoop->>Compact: 7. 检测上下文长度 (触发增量微压缩)
+        TurnLoop->>TurnLoop: 回到步骤 1 继续下一迭代
     else 纯文本结束
-        Loop->>DB: 8. Finalizer 落盘，释放 Turn 租约
-        Loop-->>User: 返回最终回复与 Token 统计
+        TurnLoop->>DB: 8. Finalizer 落盘，释放 Turn 租约
+        TurnLoop-->>User: 返回最终回复与 Token 统计
     end
 ```
 

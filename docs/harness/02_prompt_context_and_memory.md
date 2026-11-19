@@ -110,12 +110,12 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Loop as conversation_loop (turn_context_compaction)
+    participant TurnLoop as conversation_loop (turn_context_compaction)
     participant Comp as context_compressor (ContextCompressor)
     participant Aux as Auxiliary Small LLM
     participant DB as hermes_state (SQLite)
 
-    Loop->>Comp: 检测到 Token 逼近安全水位线 (Trigger Full Compaction)
+    TurnLoop->>Comp: 检测到 Token 逼近安全水位线 (Trigger Full Compaction)
     Note over Comp: Phase 1: 窗口规划与锚点保护 (Planning & Head/Tail Protection)<br/>计算预算，锁定 Head (首问约束) 与 Tail (近期活跃窗口)，界定 Middle
     Note over Comp: Phase 2: 无模型预剪枝 (Pre-LLM Tool Pruning)<br/>廉价折叠 Middle 历史大工具输出，剔除空白回显，预释放 Token
     alt 辅助模型正常总结 (Phase 3: Normal Path)
@@ -126,7 +126,7 @@ sequenceDiagram
     end
     Note over Comp,DB: Phase 4: 原子重构组装与拓扑清理 (Assembly & Finalize)<br/>拼接 Head + Summary + Tail，修复孤立工具调用对并更新游标
     Comp->>DB: 归档被剔除的 Middle 原始消息块并打上压缩标记
-    Comp-->>Loop: 返回精简重构后的 messages (释放 60%~80% 窗口)
+    Comp-->>TurnLoop: 返回精简重构后的 messages (释放 60%~80% 窗口)
 ```
 
 #### 四阶段核心执行规范
