@@ -167,14 +167,13 @@ python scripts/check
 
 ---
 
-## 📚 进阶架构专题文档
+## 📚 全景架构总纲与工程手册
 
-- 🧠 **[Harness 架构理论深度解析 (docs/harness/harness-deep-dive.md)](docs/harness/harness-deep-dive.md)**：
-  - 操作系统类比视角（CPU ALU vs OS Kernel）、内核拓扑与各子系统深度设计。
-  - 单核窄腰（Narrow Waist）拓扑与 9 步回合状态机生命周期。
-  - 前缀缓存（Prefix Caching）与 4 阶段压缩策略。
-  - 编程式工具卸载（`execute_code` RPC 机制）与单写权威（Single-Writer Authority）。
-
+- 🌐 **[Harness 架构与工程实现全景总纲 (docs/harness/harness-deep-dive.md)](docs/harness/harness-deep-dive.md)**（**一文通览全部子系统**）：
+  - **内核隐喻与拓扑**：CPU ALU vs Agent OS Kernel 对照矩阵、六大开发公理、三大黄金不变式与“单核窄腰”端到端拓扑图。
+  - **编排与上下文治理**：9 步回合状态机、Persist-Before-Execute、三层提示词 KV Cache 保活、微压缩与 4 阶段单次总结压缩（含滑动窗口降级）、L1-L3 记忆与 Curator 技能自演进状态机。
+  - **执行、隔离与多模型**：双轨工具调度与串行屏障、PTC 本地 Socket RPC 卸载、6 类执行沙箱、子智能体四重隔离、Canonical IR 出站归一化与 FD 安全 `shutdown(SHUT_RDWR)` 强杀。
+  - **权威、容灾、安全与全源码映射**：`gateway.sock` 单写权威、Epoch 纪元栅栏、入站双门禁、多端生态（CLI/TUI/Desktop/ACP/25+ IM/Cron）、SQLite WAL 两级损坏自愈、8 层纵深防御与 20 大模块源码全景映射总表。
 - 🛠️ **[Harness 开发者实施手册 (docs/harness/harness-developer-notes.md)](docs/harness/harness-developer-notes.md)**：
   - 10 个核心子系统的工程决策、实现规格参数与避坑公理。
   - 常见技术痛点与踩坑指南（避免 Prompt 分裂、死锁、状态污染）。
