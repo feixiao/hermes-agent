@@ -102,33 +102,49 @@ flowchart TD
 
 ### 2.3 四阶段深度总结压缩（Full Compaction）
 
-当会话在经历数轮微压缩后，累计 Token 仍然逼近安全水位线（如模型最大容量的 75%）时，由 `agent/context_compressor.py` 触发基于辅助小模型的四阶段深度压缩：
+当会话在经历数轮微压缩后，累计 Token 仍然逼近安全水位线（如模型最大容量的 75%）时，由 `agent/context_compressor.py` 触发基于辅助小模型的**四阶段深度压缩（4-Stage Compaction）**。
+
+> [!IMPORTANT]
+> **单次辅助调用原则**：四阶段是上下文治理的**完整工程生命周期（规划 -> 预剪枝 -> 单次提炼/降级 -> 拓扑重构）**，而非向辅助模型发送多次串行请求。在整个全量压缩流程中，辅助小模型调用仅有且至多发起 **1 次**（One-call Summarization），避免多轮往返拖慢 TTFT 并引入累积故障率。
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant Loop as conversation_loop
-    participant Comp as context_compressor
+    participant Loop as conversation_loop (turn_context_compaction)
+    participant Comp as context_compressor (ContextCompressor)
     participant Aux as Auxiliary Small LLM
     participant DB as hermes_state (SQLite)
 
-    Loop->>Comp: 检测到上下文超阈值 (Trigger Full Compaction)
-    Comp->>Comp: 划分区域: Head (系统/首问) + Middle (待压缩) + Tail (活跃窗口)
-    Comp->>Aux: Stage 1: 提炼用户核心目标与当前主攻任务
-    Comp->>Aux: Stage 2: 抽取已确认事实、环境变量与关键发现
-    Comp->>Aux: Stage 3: 提取已完成的关键操作与阻碍点
-    Aux-->>Comp: 返回各维度结构化提炼信息
-    Comp->>Comp: Stage 4: 使用统一模板重构 System/User 总结卡片
-    Comp->>DB: 归档被剔除的 Middle 消息块并打上压缩标记
-    Comp-->>Loop: 返回精简后的 messages (释放 60%~80% 窗口)
+    Loop->>Comp: 检测到 Token 逼近安全水位线 (Trigger Full Compaction)
+    Note over Comp: Phase 1: 窗口规划与锚点保护 (Planning & Head/Tail Protection)<br/>计算预算，锁定 Head (首问约束) 与 Tail (近期活跃窗口)，界定 Middle
+    Note over Comp: Phase 2: 无模型预剪枝 (Pre-LLM Tool Pruning)<br/>廉价折叠 Middle 历史大工具输出，剔除空白回显，预释放 Token
+    alt 辅助模型正常总结 (Phase 3: Normal Path)
+        Comp->>Aux: 单次请求: 统一提炼用户核心目标、环境事实与关键进展
+        Aux-->>Comp: 返回统一结构化总结卡片 (Structured Summary)
+    else 超时 / 限流 / 异常看门狗 (Phase 3: Fallback Path)
+        Note over Comp: 触发确定性规则降级 (Deterministic Fallback)<br/>生成启发式占位摘要，保障主会话永不崩溃挂死
+    end
+    Note over Comp,DB: Phase 4: 原子重构组装与拓扑清理 (Assembly & Finalize)<br/>拼接 Head + Summary + Tail，修复孤立工具调用对并更新游标
+    Comp->>DB: 归档被剔除的 Middle 原始消息块并打上压缩标记
+    Comp-->>Loop: 返回精简重构后的 messages (释放 60%~80% 窗口)
 ```
 
-#### 确定性降级路径（Deterministic Fallback）
-若辅助压缩小模型调用发生超时、限流或提供商故障，系统绝不能直接崩溃：
-- **确定性滑动窗口截断（Deterministic Sliding Window Fallback）**：
-  Harness 自动回退至纯规则截断——保留全局 System Prompt 与用户最初的第一个需求消息（Head Anchor），保留最近的最后 3~5 回合（Tail Active Window），将中间的历史消息直接裁剪，并注入确定性占位标记：
-  `[NOTICE: Earlier conversation history was pruned due to context limits.]`。
+#### 四阶段核心执行规范
 
+1. **Phase 1: 窗口规划与锚点保护（`_plan_compaction_window`）**：
+   - **Head 保护**：保留系统提示词基座与第一轮用户核心需求（User First Prompt），确保长程任务核心目标不丢失。
+   - **Tail 保护**：基于 Token 预算保护最近的活跃窗口（通常 3~5 轮及当前活跃 Tool Round），保证即时交互的连贯性。
+   - **Middle 划分**：精确界定两端锚点之间的待压缩历史窗口（`compress_start` 到 `compress_end`）。
+2. **Phase 2: 廉价无模型预剪枝（Pre-LLM Tool Pruning）**：
+   - 在触发辅助模型之前，纯规则就地修剪过往历史中已被使用的臃肿工具输出（大文件读取、冗余列表），过滤空回显（Blank Echoes）。
+   - 若修剪后 Middle 窗口已无实质内容（如仅剩历史摘要卡片），则直接短路返回，零成本完成治理。
+3. **Phase 3: 辅助模型单次结构化提炼与降级看门狗（`_summarize_window` & Fallback）**：
+   - 仅发起 **1 次** 辅助模型调用，单次提示词内统一提取四大要素：① 用户最终目标、② 关键环境状态与发现、③ 已完成工作、④ 遗留未决障碍。
+   - **看门狗安全网（Watchdog Fallback）**：若辅助模型发生超时（阶梯式超时）、限流或网络故障，立即无缝降级至确定性滑动窗口截断（Deterministic Sliding Window Fallback），插入静态占位符并继续，绝不让 Agent 挂死。
+4. **Phase 4: 原子重构组装与拓扑清理（`_assemble_compressed` & `_finalize_compressed`）**：
+   - 按照 `[Head 锚点] + [结构化 Summary 消息] + [Tail 活跃窗口]` 进行无缝拓扑重塑。
+   - **拓扑修复（Orphan Pair Cleanup）**：严格检查并清除由于裁剪导致的孤立 `tool_calls` 或 `tool` 结果消息，保证 `assistant(tool_calls)` 与 `tool` 始终严格 1:1 配对。
+   - 向 SessionDB 归档被移除的原始消息并重置微压缩游标。
 ---
 
 ## 3. 多层记忆体系（Multi-Tier Memory Architecture）
