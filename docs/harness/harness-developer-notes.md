@@ -39,7 +39,7 @@ flowchart TD
     end
 
     L1 --> L2 --> L3 --> L4 --> L5
-    L5 -->|经验沉淀与技能演进 (Curator)| L1
+    L5 -->|"经验沉淀与技能演进 (Curator)"| L1
 ```
 
 #### 缰绳工程的四大核心哲学
@@ -216,7 +216,7 @@ sequenceDiagram
     participant Agent as 主智能体 (AIAgent)
     participant Finalizer as 回合终结器 (turn_finalizer.py)
     participant Curator as 技能协调器 (agent/curator.py)
-    participant Store as 技能库 (~/.hermes/skills/<name>/SKILL.md)
+    participant Store as 技能库 (~/.hermes/skills/*/SKILL.md)
 
     User->>Agent: 委派复杂任务 (如：修复跨平台打包报错并部署)
     Note over Agent: 阶段 1: 执行 (Execute)<br/>经历多步工具调用、试错排查与用户纠正，最终跑通任务
@@ -226,7 +226,7 @@ sequenceDiagram
     Note over Curator: 阶段 2: 评估 (Evaluate)<br/>检查是否满足触发条件：<br/>① 5+ 次工具调用复杂流 ② 用户纠正 ③ 错误恢复
     alt 满足提炼条件且具复用价值
         Note over Curator: 阶段 3: 创建 / 阶段 4: 改进 (Create & Improve)<br/>提取触发条件、标准步骤、踩坑禁忌与验证命令
-        Curator->>Store: 写入或版本化更新 skills/<name>/SKILL.md
+        Curator->>Store: 写入或版本化更新 skills/*/SKILL.md
     end
     Note over Agent,Store: 下次遇到同类任务：L0 索引命中 -> L1 按需加载 SKILL.md -> 一步到位执行
 ```
@@ -293,14 +293,14 @@ flowchart LR
         Mem0["Mem0 / OpenViking / RetainDB / ByteRover 等"]
     end
 
-    Warm -->|会话启动一次性读取并冻结| Fixed
-    Dynamic -->|调用 memory 工具 (add/patch/remove)| Warm
-    Dynamic -->|微压缩 / 4 阶段 /compress 归档| SQLiteDB
+    Warm -->|"会话启动一次性读取并冻结"| Fixed
+    Dynamic -->|"调用 memory 工具 (add/patch/remove)"| Warm
+    Dynamic -->|"微压缩 / 4 阶段 /compress 归档"| SQLiteDB
     SQLiteDB <--> FTS5
-    Dynamic -->|调用 session_search 按需检索| FTS5
-    FTS5 -->|Top-K 原始片段| AuxLLM
-    AuxLLM -->|仅回填百字精华摘要 (省 88% Token)| Dynamic
-    Dynamic <-->|出站脱敏 _redact_for_provider + 慢调用闸门| External
+    Dynamic -->|"调用 session_search 按需检索"| FTS5
+    FTS5 -->|"Top-K 原始片段"| AuxLLM
+    AuxLLM -->|"仅回填百字精华摘要 (省 88% Token)"| Dynamic
+    Dynamic <-->|"出站脱敏 _redact_for_provider + 慢调用闸门"| External
 ```
 
 ---
