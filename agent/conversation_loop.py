@@ -1,9 +1,9 @@
-"""The agent conversation loop — extracted from ``run_agent.AIAgent``.
+"""Agent 会话执行主回路（从 run_agent.AIAgent 解耦剥离的“单核窄腰”中枢）。
 
-``run_conversation(agent, ...)`` drives one user turn (model call, tool dispatch,
-retries, fallbacks, compression, post-turn hooks). Symbols that callers patch on
-``run_agent`` (``handle_function_call``, ``_set_interrupt``, ``OpenAI``) resolve via
-``_ra`` so those patches keep working."""
+``run_conversation(agent, ...)`` 统一驱动单次用户回合（模型流式调用、工具分派执行、
+智能重试、故障转移 Fallback、上下文多级压缩与回合收尾持久化钩子）。
+调用方在 ``run_agent`` 上动态打桩的符号（``handle_function_call``, ``_set_interrupt``, ``OpenAI`` 等）
+统一通过 ``_ra`` 解析，保障单测打桩与热插拔契约兼容。"""
 
 from __future__ import annotations
 
@@ -1461,13 +1461,11 @@ def _preflight_timeout_result(agent, exc, conversation_history) -> dict[str, Any
 
 @dataclass
 class _LoopState:
-    """Every local the turn loop threads through the phase helpers in ``agent/turn_*.py``.
+    """回合循环状态中枢：跨 agent/turn_*.py 各阶段切片传递的全部局部变量。
 
-    Helpers take the loop locals they need as keyword arguments named like these fields and
-    return a verdict whose non-``action``/``result`` fields carry the same names;
-    :func:`_run_phase` passes and copies them back by name, so a new helper input/output
-    needs a field here and nothing else. Per-iteration slots are rebound by the phases
-    before any later phase reads them, exactly as the former inline locals were."""
+    各切片辅助函数通过参数名反射按需索取字段，并返回带有同名字段的 Verdict 裁决对象；
+    :func:`_run_phase` 负责自动按名字反射传入参数并将裁决字段拷贝回写本状态中枢。
+    各迭代专属槽位由各阶段在后续阶段读取前就地重绑定。"""
 
     # Fixed for the turn.
     user_message: Any
@@ -1556,10 +1554,10 @@ _LATCHED_VERDICT_FIELDS = {"handle_api_error": frozenset({"_provider_overflow_re
 
 
 def _run_phase(fn, agent, state: _LoopState, **extra):
-    """Call phase helper ``fn`` with the loop locals it names, copy its verdict fields back.
+    """反射调度阶段辅助函数 fn：根据其参数签名注入 state 对应字段，并回写裁决结果。
 
-    ``extra`` supplies non-state arguments (the caught exception). Returns the verdict so
-    the caller can act on ``.action`` / ``.result``."""
+    ``extra`` 提供非状态入参（例如捕获的异常 api_error/e）。返回 verdict 对象供调用方
+    根据 ``.action`` ('continue'/'break'/'return') 与 ``.result`` 执行控制流跳转。"""
     params = _PHASE_PARAMS.get(fn)
     if params is None:
         params = _PHASE_PARAMS[fn] = tuple(p for p in inspect.signature(fn).parameters if p != "agent")
@@ -1577,10 +1575,9 @@ def _run_phase(fn, agent, state: _LoopState, **extra):
 
 
 def _run_api_retry_loop(agent, s: _LoopState) -> Optional[dict[str, Any]]:
-    """One API call with its retry/recovery loop (guard → build → call → check, error handlers).
+    """单次 API 调用的重试与容灾循环（速率门禁 -> 请求组装 -> 流式调用 -> 响应校验与错误捕获）。
 
-    Returns a turn result dict when a phase ends the turn, else None once the loop is left
-    (success, a restart armed on ``s._retry``, interrupt, or retries exhausted)."""
+    当某阶段提前终结本回合时返回回合结果 dict；正常完成或退出重试循环时返回 None。"""
     while s.retry_count < s.max_retries:
         _ng = _run_phase(nous_rate_limit_guard, agent, s)
         if _ng.action == "return":
@@ -1662,16 +1659,15 @@ def _run_conversation_turn(
     title_user_message: Optional[str] = None,
     prelude: Optional[Prelude] = None,
 ) -> dict[str, Any]:
-    """Run a complete conversation with tool calling until completion; returns the result dict.
+    """驱动单次回合完整的 9 步生命周期循环，直至工具调用完全收敛或终结；返回标准结果字典。
 
-    ``stream_callback``: per-text-delta callback (TTS). ``persist_user_message``: clean text to
-    store when ``user_message`` carries API-only synthetic prefixes; timestamp / platform id are
-    stored as metadata (platform id lets restart drain recovery dedup).
-    ``title_user_message``: optional pre-injection text for titles only (None uses the
-    model-facing message; an empty string suppresses titling for this turn).
-    ``persist_user_display_*``:
-    display-only event rendering; the model still receives the message unchanged.
-    ``prelude``: scripted tool calls played before the first model call (``agent/turn_scripted_prelude.py``)."""
+    核心 9 步生命周期流程：
+    - Step 1 & 2: Preflight & Iteration Prep（预算租约预检、上下文组装与动态旁路注入）
+    - Step 3 & 4: Assembly & API Call（Canonical IR 出站格式化、带中断看门狗的 API 流式重试循环）
+    - Step 5: Response Intake（响应归一化、思维链过滤、空响/截断自愈）
+    - Step 6: Tool Round / Final Text（Persist-Before-Execute 并发执行或纯文本输出）
+    - Step 7: Compaction Check（微压缩折叠或 4 阶段深度压缩）
+    - Step 8 & 9: Finalization（Discard-on-Interrupt 角色交替防坏、增量落盘与记忆镜像）"""
     if moa_config is None:
         user_message, moa_config, persist_user_message = _decode_inline_moa_turn(
             user_message, persist_user_message
@@ -1753,6 +1749,7 @@ def _run_conversation_turn(
     while _prelude_action != "break" and (
         (s.api_call_count < agent.max_iterations and agent.iteration_budget.remaining > 0) or agent._budget_grace_call
     ):
+        # ── 阶段 1 & 2：迭代开始、动态上下文装配与预检压缩门禁 ──
         if _run_phase(begin_iteration, agent, s).action == "break":
             break
         _run_phase(prepare_iteration, agent, s)
@@ -1766,6 +1763,7 @@ def _run_conversation_turn(
             continue
         _run_phase(announce_api_call, agent, s)
 
+        # ── 阶段 3 & 4：执行带重试与中断看门狗守护的 API 调用循环 ──
         s.api_start_time, s.retry_count, s.max_retries = time.time(), 0, agent._api_max_retries
         s._retry, s.finish_reason, s.response, s.api_kwargs = TurnRetryState(), "stop", None, None
         s.api_request_id = agent._current_api_request_id = f"{s.turn_id}:api:{s.api_call_count}"
@@ -1780,6 +1778,7 @@ def _run_conversation_turn(
         if _rs.action == "continue":
             continue
 
+        # ── 阶段 5 & 6：响应归一化、思维链剥离与工具执行/最终文本 ──
         try:
             _ri = _run_phase(normalize_model_response, agent, s)
             if _ri.action == "return":
@@ -1799,6 +1798,7 @@ def _run_conversation_turn(
             if _run_phase(handle_outer_loop_error, agent, s, e=e).action == "break":
                 break
 
+    # ── 阶段 8 & 9：回合收尾、Discard-on-Interrupt 维护角色交替与持久化落盘 ──
     result = _finalize_from_state(agent, s)
     if s._compression_timeout_exhausted:
         # Reuse the gateway's context-recovery contract: transcript stays intact while
@@ -1824,13 +1824,10 @@ def run_conversation(
     title_user_message: Optional[str] = None,
     prelude: Optional[Prelude] = None,
 ) -> dict[str, Any]:
-    """Run one turn (see ``_run_conversation_turn``) and export the current-turn boundary.
+    """执行单个用户回合的公共外层信封包装器（调用 _run_conversation_turn 并导出当前回合边界）。
 
-    Every envelope that leaves the loop — success, partial/error, interrupt, retry-exhausted,
-    tool-limit, preflight timeout, codex runtime — passes through here, so the
-    ``{turn_id, current_turn_user_idx}`` pair is stamped beside the exact ``messages`` it
-    addresses, after every history rewrite including post-turn micro-compaction.
-    """
+    所有离开回合循环的信封（成功、部分完成/报错、用户中断、重试耗尽、工具限额、预检超时等）
+    均由本函数收口导出，确保 ``{turn_id, current_turn_user_idx}`` 锚点与 ``messages`` 绝对对齐。"""
     from agent.turn_context import export_current_turn_boundary
     from agent.turn_finalizer import fence_result_reply, settle_held_final
     from agent.voice_turn_route import end_voice_turn_route

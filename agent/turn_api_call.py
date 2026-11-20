@@ -1,10 +1,10 @@
-"""The provider call for the conversation turn's retry loop: ``nous_rate_limit_guard`` (skip
-the attempt while another session's Nous Portal rate limit is active), ``perform_api_call``
-(streaming decision, MoA prepared-request handshake, LLM execution middleware wrapper, the
-redirect ``_model_request_active`` bracket and the response-vs-redirect crossing check) and
-``handle_api_interrupt`` (``InterruptedError`` mid-call). Nothing here imports
-``agent.conversation_loop`` at module level (cycle).
-"""
+"""API 流式调用与异常中断切片（Step 4: API Call & Interrupt Watchdog）。
+
+核心职责与不变式：
+1. 速率限制保护（``nous_rate_limit_guard``）：跨会话共享速率超限等待与重试
+2. 流式 API 执行（``perform_api_call``）：启动后台线程流式拉取，主线程维持心跳看门狗
+3. 中断安全处理（``handle_api_interrupt``）：捕获 ``InterruptedError``，在 Socket 层安全强杀（``shutdown(SHUT_RDWR)``），
+   并写入中和占位符（``hidden_interrupt_placeholder_row``）以保障 ``user -> assistant -> user`` 角色严格交替。"""
 
 from __future__ import annotations
 
@@ -34,8 +34,11 @@ def stop_thinking_spinner(agent: Any, thinking_spinner: Any) -> None:
 
 @dataclass
 class ApiCallVerdict:
-    """``action``: ``"fallthrough"`` (``response`` is ready for verification) or ``"break"``
-    (a redirect crossed the response — rebuild armed on ``_retry`` or ``interrupted``)."""
+    """API 调用裁决对象。
+
+    ``action`` 取值：
+    - ``"fallthrough"``: 调用成功，已获取模型原始响应并准备进行后续校验
+    - ``"break"``: 调用中途被用户打断或被动态重定向重置（终止本次调用）"""
 
     action: str
     response: Any

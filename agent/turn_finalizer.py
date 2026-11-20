@@ -1,8 +1,12 @@
-"""Post-loop turn finalization for ``run_conversation``.
+"""回合后置收尾中枢（Step 8 & 9: Finalization & Post-Turn Hooks）。
 
-Budget summary, trajectory save, persist, diagnostics, response transforms, result
-assembly, steer drain, memory/skill review. Synchronous, single return. ``logger`` is
-imported lazily from ``agent.conversation_loop`` (no cycle, same logger name)."""
+核心职责与不变式：
+1. **Discard-on-Interrupt 契约**：用户打断时清理未闭合的工具调用序列，闭合会话尾部，
+   严格维护 ``user -> assistant -> user -> assistant`` 严格交替，防后续请求报 HTTP 400。
+2. **尾部形状规整**（``_close_transcript_tail``）：确保“对外交付了 final_response ⇒ 历史记录中必有 assistant 消息”。
+3. **安全持久化**（``persist_session``）：将清洗后的规整消息原子增量写入 SQLite SessionDB。
+4. **防护清理**（``_guarded_cleanup``）：轨迹保存、任务资源释放、持久化与记忆镜像各自独立隔离，任一失败不影响其他步骤。
+5. **记忆与技能触发**（``_mirror_turn_to_memory``）：异步触发长期记忆提取与 Curator 自学习整合。"""
 
 from __future__ import annotations
 
@@ -239,9 +243,11 @@ def _recover_final_from_stream(agent, final_response, interrupted, failed) -> tu
 
 
 def _close_transcript_tail(agent, messages, final_response, interrupted, _recovered_from_stream) -> None:
-    """Shape the transcript tail before the durable snapshot (scaffolding already dropped
-    and ``final_response`` already stream-recovered by the caller)."""
-    # An interrupt can leave a tool result as the tail; close the sequence so strict
+    """规整持久化前的对话历史尾部（闭合工具序列、强制角色交替、防止出现孤儿 tool 消息）。
+
+    【Discard-on-Interrupt 与尾部收敛】：
+    - 若回合被用户打断（interrupted）：合成关闭占位符，闭合未完成的工具序列，防止下游模型报 HTTP 400。
+    - 若正常结束（final_response 存在）：确保 messages 尾部必须以 assistant 结尾，防止落盘时漏记回答。"""
     # providers don't see ``tool → user`` (placeholder: final_response is usually empty).
     if interrupted:
         from agent.message_sanitization import close_interrupted_tool_sequence
@@ -648,7 +654,7 @@ def finalize_turn(
     _turn_exit_reason, _pending_verification_response=None,
     _pending_verification_response_previewed=False,
 ):
-    """Run the post-loop finalization and return the turn ``result`` dict."""
+    """执行回合退出后的全局收尾管线，组装并返回最终标准化 result 字典。"""
     from agent.conversation_loop import logger
     from agent.turn_context import PRE_LLM_BLOCK_EXIT_REASON
 

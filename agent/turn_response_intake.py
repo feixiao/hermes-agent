@@ -1,8 +1,9 @@
-"""Response intake for the conversation turn loop: normalize the raw provider response into
-the assistant message, splice agent-as-provider projections, fire ``post_api_request``, relay
-reasoning to the progress callback, and apply the incomplete-scratchpad / Codex-incomplete
-continuation guards. Nothing here imports ``agent.conversation_loop`` at module level (cycle).
-"""
+"""模型原始响应接入与归一化切片（Step 5: Response Intake）。
+
+核心职责与不变式：
+1. 响应结构归一化：将各异构厂商的原始返回包装为规范 Canonical IR（``assistant_message``）
+2. 思维链（CoT）安全清洗：过滤 ``<think>...</think>`` 标签，向前端进度回调安全分发思考流
+3. 空文本与截断检查：侦测纯思考死循环、输出被 token 截断或未完成的暂存草稿，触发自愈重试。"""
 
 from __future__ import annotations
 
@@ -33,10 +34,12 @@ _INLINE_REASONING_RE = re.compile(
 
 @dataclass
 class ResponseIntakeVerdict:
-    """``action``: ``"fallthrough"`` (process ``assistant_message``), ``"continue"`` (retry the
-    iteration: incomplete scratchpad / Codex continuation) or ``"return"`` (``result`` is the
-    turn's result dict). ``assistant_message``/``finish_reason`` are the normalized outputs;
-    ``active_system_prompt`` is rebound after a Codex reasoning-only fallover (#67321)."""
+    """响应接入裁决对象。
+
+    ``action`` 取值：
+    - ``"fallthrough"``: 响应结构合法，继续进入 Step 6 执行工具或生成文本响应
+    - ``"continue"``: 侦测到未闭合草稿或截断，就地重试本次迭代
+    - ``"return"``: 直接结束回合并返回最终结果 dict（由 ``result`` 携带）"""
 
     action: str
     assistant_message: Any

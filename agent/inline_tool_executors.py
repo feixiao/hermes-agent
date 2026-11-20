@@ -1,11 +1,14 @@
-"""Agent-level ("inline") tool executors shared by the sequential and concurrent tool paths.
+"""智能体有状态内联工具执行器（Inline Tool Executors）。
 
-These tools need live ``AIAgent`` state (stores, callbacks, session DB) and therefore
-bypass the tool registry. Each executor is ``fn(agent, args, ctx) -> result``; the
-table replaces two hand-maintained if/elif chains (``invoke_tool`` and
-``execute_tool_calls_sequential``) that had drifted apart. Tool modules are imported
-lazily at call time so ``patch("tools.x.y")`` in tests keeps working.
-"""
+【双轨调度之“内联拦截轨”】：
+常规工具（如 bash、file_read、web_search）属于“无状态公开工具”，通过 ToolRegistry 统一注册与派发；
+而核心有状态工具必须深度绑定当前智能体运行时（如 SessionDB、AIAgent 实例、GUI/终端交互回调等）：
+- ``todo_list``: 读写当前 ``agent._todo_store``
+- ``memory``: 操作常驻温记忆，严格遵循有界字符硬限（2200c / 1375c）与安全扫描
+- ``session_search``: 检索当前会话所属的 SQLite FTS5 冷记忆索引
+- ``clarify``: 触发用户确认与追问，充当工具并发执行的串行屏障（Serial Barrier）
+- ``delegate_task``: 派生独立子智能体实例并注入心跳与资源看门狗
+这些工具统一通过本模块的表驱动字典进行拦截并注入上下文，保障类型安全与测试可打桩性。"""
 
 from __future__ import annotations
 
@@ -296,7 +299,7 @@ def _setup_mcp_shim(agent, args: dict, ctx: InlineToolContext) -> Any:
     }, ctx)
 
 
-# Order is the historical if/elif order of ``execute_tool_calls_sequential``.
+# ── 有状态内联工具分派表（表驱动拦截，动态注入 agent、回调函数与内部存储实例）──
 _RAW_INLINE_TOOL_EXECUTORS: dict[str, InlineToolExecutor] = {
     "todo_list": _tool(
         "tools.todo_tool", "todo_tool", ("todos", "todos"), ("merge", "merge", False),

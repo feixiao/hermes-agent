@@ -1,11 +1,11 @@
-"""Pre-API preflight compression gate and post-tool compression for the turn loop.
+"""API 调用前置预检门禁与上下文压缩切片（Step 1: Preflight & Context Pressure Gate）。
 
-Runs once per API call after the request pressure is measured: grow a managed llama.cpp
-window (last resort), or compress when over threshold (deferring on noisy estimates, in
-failure cooldown, or while the review fork's first request is pending), handle the
-provider-proven overflow re-check fail-closed, and emit the deduped blocked/uncompressed
-overflow warnings. Nothing here imports ``agent.conversation_loop`` at module level
-(cycle); loop-internal helpers resolve lazily."""
+核心职责与不变式：
+1. 上下文压力测量：在发起 API 调用前评估 token 压力，若超出模型上下文阈值则拦截请求
+2. 触发就地压缩降温：调用 4 阶段压缩（Head/Middle/Tail 划分、辅助模型总结、孤儿清理）
+3. 动态窗口自适应：针对本地 llama.cpp 等后端自适应动态扩窗
+4. 预算退还：若因就地压缩退回重试，退还本次消耗的 API 调用与迭代预算
+5. 门禁裁决（``PreflightGateVerdict``）：控制请求是放行（``fallthrough``）、重新测量（``continue``）、超时终结（``break``）还是直接退出（``return``）。"""
 
 from __future__ import annotations
 
@@ -30,13 +30,13 @@ logger = logging.getLogger("agent.conversation_loop")
 
 @dataclass
 class PreflightGateVerdict:
-    """``action``: ``"fallthrough"`` (make the API call), ``"continue"`` (window grown or
-    history compacted — the call/budget was refunded, re-enter the turn loop and
-    re-measure), ``"break"`` (turn ends: compression timeout or non-actionable compaction
-    handoff — ``final_response``/``failed``/``_turn_exit_reason`` set) or ``"return"``
-    (``result`` is the turn's result dict). The other fields are the loop locals the gate
-    rebinds; ``_last_preflight_pressure`` is re-armed only by a compression pass."""
+    """预检门禁裁决对象。
 
+    ``action`` 取值：
+    - ``"fallthrough"``: 压力正常，直接放行进行 API 调用
+    - ``"continue"``: 窗口已扩容或历史已完成就地压缩，已退还调用预算，重新测量并组装请求
+    - ``"break"``: 门禁拦截终结回合（如压缩超时或超限且无法缩减）
+    - ``"return"``: 直接结束回合并返回最终结果 dict（由 ``result`` 携带）"""
     action: str
     pending_moa_prepared_request: Any
     messages: Any

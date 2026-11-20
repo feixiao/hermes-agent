@@ -1,10 +1,10 @@
-"""``AIAgent.run_conversation`` / ``chat`` façade.
+"""``AIAgent.run_conversation`` / ``chat`` 门面代理模块。
 
-Turn admission around ``conversation_loop.run_conversation``: durable cross-process session turn lease +
-refresher thread and liveness watchdog (``agent.turn_facade_lease``), relay/accounting/portal scopes, and
-balanced start/finish marks. Extracted from ``run_agent.py``; every method resolves through ``AIAgent``'s
-MRO unchanged.
-"""
+负责在调用底层 ``conversation_loop.run_conversation`` 前后管理：
+1. 跨进程会话回合租约（Durable Turn Lease）与心跳看门狗（``agent.turn_facade_lease``）
+2. 抑制或中断后台审查（Background Review），优先保障前台用户交互低延迟
+3. 中继（Relay）、计费计量（Accounting）与亲和性作用域（Portal Scopes）管理
+4. 对齐回合启动与完成生命周期通知标记。从 ``run_agent.py`` 解耦提取。"""
 import logging
 import uuid
 from contextlib import suppress
@@ -31,7 +31,7 @@ class TurnFacadeMixin:
         title_user_message: Optional[str]=None,
         prelude: Optional[Generator]=None,
     ) -> dict[str, Any]:
-        """Forwarder — see ``agent.conversation_loop.run_conversation``."""
+        """回合执行转发器：获取会话租约并转发调用 ``agent.conversation_loop.run_conversation``。"""
         # A review shares this session_id for cache parity: fence review startup or interrupt
         # an admitted request and await its exit before opening live-turn instrumentation.
         # Foreground priority is retained if the review does not acknowledge within the bounded deadline

@@ -1,8 +1,14 @@
-"""System prompt assembly -- identity, platform hints, skills index, context files.
+"""系统提示词静态装配中枢（System Prompt Assembly & Prefix Cache Invariant）。
 
-All functions are stateless; AIAgent._build_system_prompt() combines the pieces
-with memory and ephemeral prompts.
-"""
+核心职责与不变式：
+1. **前缀缓存（Prefix Cache）神圣不变式**：在整个会话生命周期内，系统提示词必须逐字节严格冻结，
+   以最大化保活大模型服务商（Anthropic/OpenAI/DeepSeek 等）的 KV Cache，降低首字延迟与推理费用。
+2. **三层静态提示词结构**：
+   - Layer 1: 核心身份认知（DEFAULT_AGENT_IDENTITY）与人设（SOUL.md）
+   - Layer 2: 平台环境约束、工具使用规范与技能一级索引（仅包含 Name + Description）
+   - Layer 3: 项目上下文文件（按优先级加载：.hermes.md -> AGENTS.md -> CLAUDE.md -> .cursorrules）
+3. **5 秒超时守护**（_CONTEXT_FILE_READ_TIMEOUT_SECS = 5.0）：使用守护线程读取上下文文件，
+   防范 iCloud Drive / OneDrive / NFS 等网络挂载文件冷读取卡死导致 Agent 启动阻塞。"""
 
 import contextvars
 import json
@@ -34,13 +40,9 @@ from utils import atomic_json_write, file_cache_version
 logger = logging.getLogger(__name__)
 
 
-# Default read deadline for context files (SOUL.md, AGENTS.md, .cursorrules,
-# ...); overridable via ``context_file_read_timeout`` in config.yaml.
-# Intentionally short: network-backed filesystems (iCloud Drive, OneDrive,
-# NFS) can fault-in an evicted file and block a cold read indefinitely, which
-# stalls system-prompt assembly before the first turn.
+# 读取上下文文件（SOUL.md, AGENTS.md, .cursorrules...）的超时上限（默认 5.0 秒）；
+# 防止网络挂载文件系统（iCloud Drive, OneDrive, NFS）冷读唤醒阻塞主线程导致启动卡死。
 _CONTEXT_FILE_READ_TIMEOUT_SECS = 5.0
-
 
 def _get_context_file_read_timeout() -> float:
     """``context_file_read_timeout`` from config.yaml, else the 5s default."""

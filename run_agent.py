@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AIAgent: the tool-calling agent runner (conversation loop, tool execution, session lifecycle).
+"""AIAgent: 工具调用型智能体执行器（会话循环驱动、工具执行调度与会话生命周期管理）。
 
     from run_agent import AIAgent
     agent = AIAgent(base_url="http://localhost:30000/v1", model="claude-opus-4-20250514")
@@ -217,7 +217,16 @@ class AIAgent(
     InterruptControlMixin, TurnExplainersMixin, ActivityTrackingMixin, RateLimitCreditsMixin,
     SessionPersistenceMixin, CompressionFacadeMixin, TurnFacadeMixin, VisionMessagePrepMixin, ReasoningParamsMixin,
 ):
-    """AI Agent with tool calling capabilities."""
+    """AI Agent 核心门面类（Facade Pattern），提供端到端工具调用、流式生成与会话生命周期管理。
+
+    架构角色：
+    作为“单核窄腰”模式的上层门面，组合 14 个 Mixin 混入类：
+    - ClientLifecycleMixin / StreamDeliveryMixin: API 客户端管理与打字机式流式投递
+    - StatusOutputMixin / InterruptControlMixin: 终端状态反馈与用户打断取消控制
+    - SessionPersistenceMixin / TurnFacadeMixin: SQLite 持久化与回合入口准入 (run_conversation)
+    - CompressionFacadeMixin: 上下文多级微压缩与折叠门面
+    所有底层繁重循环均委托给 ``agent.conversation_loop.run_conversation`` 执行。
+    """
 
     _TOOL_CALL_ARGUMENTS_CORRUPTION_MARKER = (
         "[hermes-agent: tool call arguments were corrupted in this session and "

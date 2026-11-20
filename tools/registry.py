@@ -1,9 +1,14 @@
-"""Central registry for all hermes-agent tools: each tool file calls ``registry.register()``
-at import to declare schema, handler, toolset membership and availability check;
-``model_tools.py`` queries the registry instead of keeping parallel data structures.
-Cycle-safe import chain: this module imports nothing from model_tools or tool files;
-tools/*.py import it at module level; model_tools.py imports both; run_agent/cli import
-model_tools."""
+"""全系统工具自注册中枢（Tool Registry & Dynamic Discovery）。
+
+核心职责与设计哲学：
+1. **去中心化自注册**：各工具模块在被 import 时主动调用 ``registry.register()`` 声明 Schema、
+   执行处理函数（handler）、所属工具集（toolset）与可用性探测检查（check_fn）。
+2. **AST 静态扫描发现（discover_builtin_tools）**：启动时不盲目 import 全部工具，而是
+   通过 AST 扫描各模块是否存在注册调用，并以 `(mtime_ns, size)` 持久化缓存，加速 CLI 启动。
+3. **探测抖动保护（_check_fn_cached）**：对于带外部依赖的工具（如 Docker/Web），缓存可用性
+   探测结果（TTL=30s，Grace=60s），防止环境瞬时抖动误将整个工具集摘牌。
+4. **错误消息截断保护（_MAX_TOOL_ERROR_CHARS = 2048）**：发往模型上下文的报错硬截断在 2048 字符内，
+   防止失控异常堆栈打爆上下文预算与前缀缓存。"""
 
 import ast
 import functools
@@ -47,7 +52,7 @@ def _session_slot_key():
     return normalize_scope(_session_tool_scope.get())
 
 
-# Cap on a tool error body; only trims runaway interpolated exceptions (static msgs are ~115 chars).
+# 发往模型上下文的工具错误信息长度硬限（2048 字符），防止失控异常堆栈打爆上下文预算
 _MAX_TOOL_ERROR_CHARS = 2048
 _TOOL_ERROR_TRUNCATION_MARKER = "… [truncated]"
 # Logs keep more of the body than the model sees, but still a bounded amount.

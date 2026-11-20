@@ -1,11 +1,11 @@
-"""Outer-iteration bookkeeping for the conversation turn loop, in call order:
-``begin_iteration`` (pending redirect, interrupt / review-budget / iteration-budget exits),
-``prepare_iteration`` (``agent:step`` callback, skill-nudge counter, pre-API ``/steer`` drain as a
-standalone user row after the newest tool result, run-budget wrap-up notice, tool_call
-argument sanitization, interrupt-placeholder ghost-row neutralisation, role-alternation repair),
-``announce_api_call`` (verbose summary / quiet spinner) and, after the retry loop,
-``apply_retry_restarts`` (consumes the ``TurnRetryState`` restart flags). Nothing here
-imports ``agent.conversation_loop`` at module level (cycle)."""
+"""单次迭代准备与记账切片（Step 2: Iteration Prep）。
+
+包含外层循环各辅助函数：
+1. ``begin_iteration``: 检查中断标记、审查预算（review budget）与迭代预算（iteration budget）
+2. ``prepare_iteration``: 组装历史消息、动态上下文旁路注入、收敛提示（70%/90% 预算告警）、
+   运行时 ``/steer`` 旁路吸纳入站、工具调用参数修复、幽灵行中和与角色交替修复（严禁改动 system_prompt）
+3. ``announce_api_call``: 终端打字机式或 KawaiiSpinner 进度提示
+4. ``apply_retry_restarts``: 重试后重启消费。"""
 
 from __future__ import annotations
 
@@ -144,9 +144,11 @@ def _neutralise_replay_echo_ghosts(seq: list[dict[str, Any]]) -> tuple[list[dict
 def prepare_iteration(
     agent: Any, *, messages: Any, api_call_count: Any, user_message: Any = None, current_turn_user_idx: Any = None,
 ) -> IterationPrep:
-    """Prepare ``messages`` for this iteration in the original order. Every mutation here is
-    cache-safe by construction: steer text is appended as a new (not yet persisted) user row, the ghost-row
-    filter neutralises copies of hidden interrupt placeholders, and repair runs BEFORE the request build."""
+    """为本次迭代组装并清洗 ``messages`` 序列。
+
+    【前缀缓存（Prefix Cache）保活契约】：
+    所有动态信息（电池状态、工作目录、时区、/steer 动态干预、预算收敛警告）
+    严格通过最新的 user 消息或 tool 结果注入，严禁修改全局 system_prompt！"""
     from agent.conversation_loop import _maybe_inject_run_budget_wrapup
 
     # nous.anthropic_wire=auto: a wire switch decided from the previous response lands here,

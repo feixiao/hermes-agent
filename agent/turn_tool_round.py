@@ -1,9 +1,12 @@
-"""One tool-calling round of the conversation turn loop: validate/cap/dedupe the model's
-tool calls, persist the tool-call turn BEFORE any side effect, execute the tools, honour
-guardrail halts / persistence failures, then compress after tool results. Nothing here
-imports ``agent.conversation_loop`` at module level (cycle) — loop-internal helpers resolve
-lazily.
-"""
+"""回合循环中的单轮工具调用执行切片（Step 6: Tool Round）。
+
+核心职责与不变式：
+1. 工具调用校验、截断修复与去重（``validate_tool_calls`` / ``deduplicate``）
+2. **Persist-Before-Execute 契约**：在执行任何带副作用的工具前，必须先把包含 ``tool_calls``
+   的 assistant 消息原子持久化到 SessionDB（若发生系统断电或破坏性工具重启，恢复时可查已执行块）
+3. 工具并发执行（``ThreadPoolExecutor``）与结果严格按原始 ``tool_call_id`` 顺序回写
+4. 护栏拦截与持久化失败熔断（Fail-Closed 终止当前回合）
+5. 工具结果返回后的增量微压缩检查（``compress_after_tool_results``）"""
 
 from __future__ import annotations
 
@@ -28,11 +31,12 @@ _LINE_IS_REPLY_TOOLS = _HOUSEKEEPING_TOOLS | {"setup_beat"}
 
 @dataclass
 class ToolRoundVerdict:
-    """``action``: ``"continue"`` (tools ran, next API call), ``"break"`` (turn ends:
-    persistence failure, guardrail halt, post-tool compression end) or ``"return"``
-    (``result`` is the turn's result dict). The other fields are the loop locals the round
-    rebinds."""
+    """工具轮次执行裁决对象。
 
+    ``action`` 取值：
+    - ``"continue"``: 工具成功执行并写入结果，驱动下一轮 API 调用
+    - ``"break"``: 中断回合循环（持久化失败、安全护栏阻断、后置压缩终结等）
+    - ``"return"``: 直接结束回合并返回最终结果 dict（由 ``result`` 携带）"""
     action: str
     messages: Any
     conversation_history: Any
@@ -53,10 +57,13 @@ def run_tool_round(
     max_compression_attempts: Any, final_response: Any, failed: Any, _turn_exit_reason: Any,
     truncated_tool_call_retries: Any, current_turn_user_idx: Any,
 ) -> ToolRoundVerdict:
-    """Execute one tool round in the exact original order. Persist-before-execute is a
-    durability invariant: resume must see the executed block if a destructive tool restarts
-    Hermes; a failed canonical append ends the turn rather than running tools from
-    process-only state."""
+    """按模型最初返回的精确顺序执行一轮工具调用。
+
+    【核心不变式】：
+    - **Persist-Before-Execute**：执行工具前先将 assistant tool_calls 刷入 SQLite，
+      若持久化失败则绝不凭内存状态裸执行工具，直接 Fail-Closed 中断回合。
+    - **顺序回写**：即使多个无依赖工具并发执行，其写回 messages 的 tool 结果也必须
+      与原始 tool_calls 序列严格一一对应。"""
     from agent.conversation_loop import _invalid_tool_name_error_content
 
     def _verdict(action: str, result: Optional[dict[str, Any]] = None) -> ToolRoundVerdict:
@@ -127,8 +134,7 @@ def run_tool_round(
             tc for tc in assistant_message.tool_calls if tc.function.name in agent.valid_tool_names
         ]
 
-    # Persist the tool-call turn before any tool side effects so resume sees the executed
-    # block if a destructive tool restarts Hermes.
+    # ── 核心不变式：Persist-Before-Execute（先落盘持久化 tool_calls 再执行任何工具副作用）──
     try:
         _tool_turn_persisted = agent._flush_messages_to_session_db(messages, conversation_history)
     except Exception as exc:
@@ -168,6 +174,7 @@ def run_tool_round(
     from agent.prepared_compaction import maybe_prepare
     maybe_prepare(agent, messages, origin="tool-batch")
 
+    # ── 核心分派：执行工具调用（注册表并发或内联拦截），按原始顺序收集结果回写 messages ──
     agent._execute_tool_calls(assistant_message, messages, effective_task_id, api_call_count)
     from hermes_cli.observability.shared_metrics_harness import finish_tool_round
 
@@ -202,8 +209,7 @@ def run_tool_round(
     # Defer the paragraph break: _fire_stream_delta() prepends one "\n\n" when real
     # text arrives, so tool iterations don't stack blank lines.
     agent._stream_needs_break = True
-    # Refund the iteration when the ONLY tool was execute_code (programmatic tool
-    # calling) — cheap RPC-style calls shouldn't eat the budget.
+    # ── PTC 编程式工具调用退款：若唯一工具是 execute_code 则退还迭代预算 ──
     if {tc.function.name for tc in assistant_message.tool_calls} == {"execute_code"}:
         agent.iteration_budget.refund()
 
