@@ -321,9 +321,9 @@ if __name__ == "__main__":
 
 ---
 
-## 5. 本地开发与单步断点调试实战
+## 5. 本地开发与命令行调试实战
 
-不要依赖外层庞大的 CLI 或 IM 网关进行内核调试。直接通过独立 Python 脚本单步追踪 `AIAgent`。
+遵循“单核窄腰”原则，开发与调试全流程集中在命令行终端与极简驱动脚本上。外围接入端（桌面端、多平台网关）作为边缘解耦模块，其独立配置与启动已下沉至各自子文档。
 
 ### 5.1 隔离开发环境配置
 ```bash
@@ -338,8 +338,14 @@ export HERMES_DEBUG=1
 export OPENAI_API_KEY="sk-..."
 ```
 
-### 5.2 编写单步调试驱动脚本（`debug_harness.py`）
-在项目根目录创建 `debug_harness.py`：
+### 5.2 交互式 CLI 快速验证（命令行全流程首选）
+直接在终端启动命令行 REPL，观察控制台流式思考、工具并发派发与上下文压缩：
+```bash
+python cli.py
+```
+
+### 5.3 独立 Python 脚本单步断点（内核状态机追踪首选）
+在项目根目录创建 `debug_harness.py`，直接追踪 `AIAgent.run_conversation()`：
 
 ```python
 """debug_harness.py - 单步断点调试 Harness 核心"""
@@ -371,7 +377,7 @@ print("历史消息总数:", len(result.get("messages", [])))
 print("总 Token 消耗:", result.get("total_tokens"))
 ```
 
-### 5.3 调试命令与质量检查
+### 5.4 调试命令与质量检查
 ```bash
 # 使用 Python 内置 pdb 断点调试
 python -m pdb debug_harness.py

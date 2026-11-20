@@ -59,11 +59,27 @@ cp .env.example .env
 
 ---
 
-## 🐞 调试方式 (How to Debug & Run)
+## 💻 命令行快速上手与核心调试 (Quickstart & Debugging)
 
-### 方式一：独立 Python 脚本断点调试 Harness 核心内核（最推荐）
+遵循“单核窄腰”架构原则，核心开发与调试路径全面收敛至命令行终端与极简内核脚本，零外部环境负担。
 
-绕过复杂的 CLI/TUI 前端，直接通过脚本单步调试 `AIAgent` 编排控制回路（支持 VS Code / PyCharm / pdb）：
+### 1. 交互式 CLI 快速上手（全流程交互体验首选）
+
+直接启动命令行交互式 REPL，观察控制台流式思考、工具并发调用输出与状态管理：
+
+```bash
+# 启动命令行交互 REPL
+python cli.py
+
+# 常用交互调试指令：
+/model openai:gpt-4o-mini   # 快速切换调试模型
+/status                     # 查看当前会话状态与 Token 预算
+/usage                      # 查看上下文与配额使用
+```
+
+### 2. 独立 Python 脚本断点调试（内核状态机追踪首选）
+
+绕过复杂的终端渲染与事件循环，直接通过纯 Python 脚本单步追踪 `AIAgent` 编排回路，直击 `agent/conversation_loop.py` 9 步状态机：
 
 创建临时调试脚本 `debug_harness.py`：
 
@@ -89,28 +105,14 @@ print("Final Output:", result.get("final_response"))
 print("Turn Count:", len(result.get("messages", [])))
 ```
 
-使用 pdb 或 IDE 断点调试：
+使用 pdb 或 IDE 断点单步调试：
 ```bash
 python -m pdb debug_harness.py
 ```
 
-### 方式二：交互式 CLI 调试单步交互
+### 3. 运行窄范围契约测试（验证单模块行为）
 
-直接启动命令行 REPL，观察控制台流式工具调用输出与日志：
-
-```bash
-# 启动 CLI（添加 verbose 日志输出）
-python cli.py
-
-# 快速切换调试模型或查看当前状态
-/model openai:gpt-4o-mini
-/status
-/usage
-```
-
-### 方式三：运行窄范围契约测试（验证单模块行为）
-
-不要直接运行裸 `pytest`，必须使用官方包装脚本 `./scripts/run_tests.sh`，自带环境守卫与沙箱隔离：
+使用官方包装脚本 `./scripts/run_tests.sh` 运行契约测试，自带环境守卫与沙箱隔离：
 
 ```bash
 # 1. 调试回合状态机与消息不变式
@@ -126,15 +128,27 @@ python cli.py
 ./scripts/run_tests.sh tests/gateway/test_session_authority.py
 ```
 
-### 方式四：静态代码健康检查
+### 4. 静态代码健康检查
 
-在修改核心状态机或工具代码后，运行项目的严格校验工具（包含 `HX` 架构健康规则）：
+在修改核心状态机或工具代码后，运行代码质量检查（包含 `HX` 架构健康规则与边界隔离检查）：
 
 ```bash
-# 运行全部代码质量检查（包含 ruff, 类型检查, 边界检查）
 python scripts/check
 ```
 
+---
+
+## 🔌 边缘接入端指引 (Edge Frontends Index)
+
+所有非命令行接入端（桌面端、多平台消息网关、Web、ACP）均作为边缘外围适配器接入，其独立配置与启动说明已完全下沉至各自模块，避免干扰核心学习：
+
+| 接入形态 | 边缘适配实现 | 快速上手与配置指南 |
+|---|---|---|
+| **桌面客户端** | Electron + React 19 + Vite | 详见 [apps/desktop/README.md](apps/desktop/README.md) |
+| **多平台消息网关** | 25+ IM 平台适配器 + `gateway.sock` 单写服务 | 详见 [docs/harness/04_providers_gateway_disaster_recovery_and_security.md](docs/harness/04_providers_gateway_disaster_recovery_and_security.md) 与 [gateway/run.py](gateway/run.py) |
+| **Web 仪表盘** | React 19 + Tailwind CSS + FastAPI 后端 | 详见 [web/README.md](web/README.md) |
+| **终端 TUI** | React + Ink 终端界面 | 详见 [ui-tui/README.md](ui-tui/README.md) |
+| **ACP 协议适配** | Agent Client Protocol (IDE 编辑器接入) | 详见 [acp_adapter/](acp_adapter/) |
 ---
 
 ## 📖 Harness 架构与开发全景专栏
