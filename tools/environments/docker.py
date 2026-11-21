@@ -1,8 +1,12 @@
-"""Docker execution environment for sandboxed command execution.
+"""Docker 容器隔离执行环境（Docker Execution Environment）。
 
-Security hardened (cap-drop ALL, no-new-privileges, PID limits), configurable
-resource limits (CPU, memory, disk), and optional filesystem persistence via
-bind mounts.
+隔离模型与安全加固：
+在轻量级 Docker 容器中执行不可信命令，提供操作系统级物理沙箱隔离。
+
+【安全加固与配额硬限制】：
+1. **最小权限剥离（Hardened Privileges）**：默认启用 `--cap-drop ALL`, `--security-opt no-new-privileges`，封死提权可能；
+2. **资源配额硬限**：限制最大 CPU 核心数、物理内存与最大 PID 进程数，杜绝 Fork 炸弹挂起宿主机；
+3. **文件权限回收与宿主映射**：通过绑定挂载（Bind Mount）打通工作目录，并在执行完毕后自动矫正文件属主所有权。
 """
 
 import datetime

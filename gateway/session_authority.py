@@ -1,7 +1,13 @@
-"""Gateway-owned live sessions and canonical durable FIFO scheduling.
+"""网关会话单写权威服务（Session Authority & Single-Writer IPC）。
 
-Only the runtime bootstrap holding profile ownership may initialize this service.
-Transport attachment never constructs an agent or takes a turn lease.
+并发架构与租约栅栏：
+在多前端（25+ 消息平台、CLI、Desktop、Cron）并发接入场景下，作为 SQLite 状态库的单一法定写入权威。
+
+【核心架构与租约不变量】：
+1. **单写 Unix Socket 通信（`gateway.sock`）**：多端发起的会话写操作必须 funneled 通过本地套接字提交，
+   彻底解决多进程直写 SQLite 导致的 `database is locked` 锁库风险；
+2. **运行时 Epoch 租约保护（Runtime Epoch Fencing）**：通过会话租约（Lease）防止过期的僵尸任务在重启后产生幽灵写入；
+3. **权威 FIFO 调度**：严格按消息到达顺序进入会话排队队列，保证消息因果序（Causality）完整。
 """
 from __future__ import annotations
 

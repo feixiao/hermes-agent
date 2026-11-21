@@ -1,11 +1,11 @@
-"""Implementation of :meth:`AIAgent.__init__` as ``init_agent(agent, ...)``.
+"""AIAgent 初始化装配器（``AIAgent.__init__`` 的核心实现 ``init_agent(agent, ...)``）。
 
-``init_agent`` is a thin, ordered orchestrator over ``_init_*`` / ``_build_*`` phase
-helpers (routing → callbacks → client → tools → session → config sections → compression →
-context engine). Phase ORDER is load-bearing: later phases read attributes earlier ones set.
-Symbols that tests patch on ``run_agent.*`` (``OpenAI``, ``get_tool_definitions``,
-``logger``, …) are resolved through :func:`_ra` so the patch contract is preserved.
-"""
+架构定位与装配顺序：``init_agent`` 是一个严格按顺序执行的依赖注入编排器，通过阶段性辅助函数
+（路由/凭据池 → 平台回调 → LLM 客户端与 Fallback 链 → 工具注册加载 → SessionDB 会话状态 →
+配置解析 → 记忆引擎挂载 → 上下文压缩器引擎挂载）完成组装。
+
+【核心不变式】：1. 阶段加载顺序强依赖，后续阶段直接读取前面挂载属性；2. 单测 patch 动态查找保持生效；
+3. 环境与沙箱严格通过 ``get_hermes_home()`` 获取，严禁硬编码。"""
 
 from __future__ import annotations
 

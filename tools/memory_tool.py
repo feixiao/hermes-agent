@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
-"""Memory Tool - persistent curated memory (MEMORY.md = agent notes, USER.md = user
-profile). Both enter the system prompt as a FROZEN snapshot at session start;
-mid-session writes hit disk but never change the prompt (prefix cache intact).
-Single `memory` tool: add/patch/remove or a batch `operations` list."""
+"""常驻持久化记忆工具（Memory Tool）。
+
+架构职责与缓存保护设计：
+管理持久化精选记忆（``MEMORY.md`` 为智能体自身笔记，``USER.md`` 为用户画像档案）。
+
+【核心不变式】：
+1. **System Prompt 绝对冻结（Prefix Cache 保护）**：在会话启动时，将磁盘记忆作为不可变快照
+   （Frozen Snapshot）注入系统提示词；会话中途写入立即落盘，但**绝对不修改当前会话的系统提示词**，
+   保证提供商端前缀缓存 100% 命中；
+2. **原子单工具交互（Single `memory` Tool）**：提供统一的 `add` / `patch` / `remove` 操作，或批量 `operations`；
+3. **审批门禁预筛选（Write Approval Gating）**：在执行破坏性修改或后台自动整理前进行安全扫描与暂存审批。
+"""
 
 import copy
 import json
@@ -45,9 +53,7 @@ from tools.memory_tool_store import (
 
 
 def load_on_disk_store() -> MemoryStore:
-    """Fresh on-disk MemoryStore with configured limits/flags for contexts with no live
-    agent (gateway, Desktop, ``/memory``) so approvals enforce the SAME caps as
-    ``agent_init``. Falls back to defaults if config can't load; never raises."""
+    """加载磁盘上的最新 MemoryStore 实例（用于无活跃 agent 的独立场景，如网关审批或 CLI /memory 命令）。"""
     try:
         from hermes_cli.config import load_config
         config = load_config() or {}
@@ -248,7 +254,7 @@ def _invalid(message: str) -> tuple[str, str]:
 
 
 def _memory_tool(action, target, content, old_text, new_text, operations, store) -> tuple[str, str]:
-    """``(outcome, result_json)``: ``rejected`` when refused or held before touching the store."""
+    """执行单次或批量记忆变更分派。返回 ``(outcome, result_json)``。"""
     # An omitted optional string can arrive as "" (#90468): let the new_text alias fill it.
     if not content and new_text:
         content = new_text

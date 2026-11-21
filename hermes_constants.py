@@ -1,6 +1,12 @@
-"""Shared constants for Hermes Agent.
+"""Hermes 全局通用常量与配置路径基准（Shared Constants & Path Resolution）。
 
-Import-safe, stdlib-only — importable from anywhere without circular-import risk.
+设计原则与多 Profile 隔离：
+纯标准库实现，支持任意模块无循环引用安全导入。
+
+【核心架构铁律】：
+**严禁代码中硬编码 `~/.hermes`**！
+所有配置、会话库与持久化存储路径必须通过 ``get_hermes_home()`` 获取，在 UI 渲染层必须通过 ``display_hermes_home()`` 渲染；
+支持多 Profile（`HERMES_PROFILE`）物理隔离与上下文级临时覆盖（`set_hermes_home_override`）。
 """
 
 import contextlib

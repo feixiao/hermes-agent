@@ -1,11 +1,12 @@
-"""Session ``/yolo``: the one toggle / restore / carry contract every surface calls.
+"""会话级极速免审批模式契约（Session `/yolo` Mode Contract）。
 
-The bypass itself is ``tools.approval``'s in-memory per-key set, so every process starts with it empty.
-Each surface persists it where its session identity lives: CLI, TUI and Desktop on the session row
-(``model_config.yolo_mode``), the messaging gateway on the routing entry, whose key outlives compression
-rotations; sessions the gateway owns for CLI/TUI/Desktop clients (``config.set key=yolo``) and their managed
-workers use that same routing entry. The surface hands its writer in as ``persist(enabled)``; everything else
-is decided here, so the CLI ``/yolo``, the TUI Shift+Tab, the Desktop zap and a Telegram ``/yolo`` behave the same.
+统一跨端行为规范：
+提供多端（CLI `/yolo`、TUI Shift+Tab、Desktop 开关、Telegram `/yolo`）统一的免审批切换契约。
+
+【核心不变式】：
+1. **内存与持久化分离**：内存豁免集合在每个进程独立维护；持久化状态写入会话元数据（`model_config.yolo_mode`）；
+2. **先落盘后翻转（Write Before Flip）**：持久化写入必须在内存标志翻转前完成，避免崩溃重启时状态分裂；
+3. **HARDLINE 绝对不可豁免**：即使处于 YOLO 激活状态，任何落入 `detect_hardline_command` 的毁灭性指令依然绝对拦截。
 """
 
 import logging

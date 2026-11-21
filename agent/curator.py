@@ -1,10 +1,16 @@
-"""Curator — background skill maintenance orchestrator.
+"""技能演进与管护调度器（Curator — Background Skill Maintenance Orchestrator）。
 
-Inactivity-triggered (no cron daemon): when the agent is idle and the last run is older than ``interval_hours``,
-``maybe_run_curator()`` auto-transitions lifecycle states from activity timestamps, optionally forks an AIAgent that
-may pin/archive/consolidate/patch skills via skill_manage, and persists scheduler state in ``.curator_state``.
-Invariants: only curator-managed skills are touched; never delete, only archive (recoverable); pinned skills bypass
-all auto-transitions; the fork uses the auxiliary client and never touches the main session's prompt cache."""
+演进机制与生命周期状态机：
+基于空闲时间触发（无需 Cron 守护进程）：当智能体空闲且距上次运行超过 ``interval_hours``（默认 7 天）时，
+自动对技能执行确定性生命周期迁移与修剪。
+
+【核心不变式与安全红线】：
+1. **确定性状态流转（零 LLM 开销）**：
+   `Active` $\rightarrow$ `Stale`（超过 14 天未调用）$\rightarrow$ `Archived`（超过 30 天未调用）；
+2. **永不物理删除（Never Delete, Only Archive）**：只做归档移动，所有技能随时可恢复，拒绝静默丢失；
+3. **置顶保护（Pinned Skills Bypass）**：人工钉选（Pinned）的技能跳过所有自动流转；
+4. **后台 Fork 提炼**：可选的模型聚合分支使用独立客户端，严禁污染主会话的 Prompt Cache。
+"""
 
 from __future__ import annotations
 

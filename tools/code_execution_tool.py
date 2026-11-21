@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Code Execution Tool -- Programmatic Tool Calling (PTC).
+"""编程式工具代码执行器（Code Execution Tool / PTC: Programmatic Tool Calling）。
 
-The LLM writes a Python script that calls Hermes tools via RPC, collapsing
-multi-step tool chains into one inference turn; only the script's stdout returns
-to the LLM. Local backend: a persistent per-conversation session kernel
-(tools/code_kernel.py) over a Unix socket (loopback TCP on Windows). Remote
-backends: a remote session kernel (tools/code_kernel_remote.py) falling open to a
-per-call script ship, tool calls as request files polled via env.execute()
-(needs Python 3 on the backend). Siblings: tools/code_execution_env.py (env
-scrubbing, interpreter/cwd), tools/code_execution_rpc.py (RPC servers).
+设计机制与吞吐量优化：
+允许大模型编写一段 Python 脚本，通过内部 RPC 双向调用 Hermes 工具链，从而将长达数十轮的
+“模型思考-单工具执行-模型再思考”串行往返折叠为单次推理回合（50 轮工具调用折叠为 1 轮脚本执行）。
+仅将脚本的标准输出（stdout）返回给大模型。
+
+【核心架构与通信】：
+1. **本地内核（Local Backend）**：基于 Unix Domain Socket（Windows 为环回 TCP）的持久化 Python 会话内核；
+2. **远程沙箱（Remote Backend）**：通过环境沙箱传输并在远端执行代码；
+3. **沙箱工具白名单（`SANDBOX_ALLOWED_TOOLS`）**：严格限制沙箱脚本内可调用的工具集合；
+4. **迭代预算退款契约**：当一个回合的唯一工具是 `execute_code` 时，系统自动退还迭代步数，避免额度浪费。
 """
 
 import json

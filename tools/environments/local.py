@@ -1,4 +1,13 @@
-"""Local execution environment — spawn-per-call with session snapshot."""
+"""本地进程执行环境（Local Execution Environment）。
+
+架构职责与安全边界：
+在宿主机操作系统本地直接派生进程执行命令，结合会话快照维持持久化体验。
+
+【关键机制与安全管控】：
+1. **进程组管控（Process Groups）**：创建独立进程组，保证在超时或打断时能够可靠杀死整个进程树；
+2. **环境变量深度清洗**：剥离 Hermes 内部敏感密钥与内部路径标志，防止被子进程窥探；
+3. **标准输入/输出流式管道（Piped IO）**：支持双向数据投递与实时流式输出采集。
+"""
 
 import contextlib
 import logging

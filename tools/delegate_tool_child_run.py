@@ -1,5 +1,14 @@
-"""Running ONE pre-built child agent: heartbeat, registry entry, workspace seeding,
-timeout/failure handling, result-entry assembly and cleanup (``_ChildRun``)."""
+"""单子智能体执行切片与心跳看门狗（Child Agent Execution & Heartbeat Watchdog）。
+
+生命周期与卡死防御：
+管理单个已装配子智能体的生命周期：心跳看门狗监控、工作区初始化、超时/故障降级、结果组装与资源回收。
+
+【停滞看门狗（Heartbeat Watchdog）机制】：
+- ``_HEARTBEAT_INTERVAL = 30s``：每 30 秒探测一次子智能体心跳；
+- ``_HEARTBEAT_STALE_CYCLES_IDLE = 15``（450 秒无进展判定空闲卡死）；
+- ``_HEARTBEAT_STALE_CYCLES_IN_TOOL = 40``（1200 秒卡在同一工具判定工具卡死）；
+- 超时后给予 2.0 秒优雅关闭缓冲，确保结果可靠收敛。
+"""
 
 from __future__ import annotations
 

@@ -1,9 +1,10 @@
-"""Host-side RPC servers for execute_code sandboxes.
+"""代码执行沙箱宿主端 RPC 服务端（Host-side RPC Servers for execute_code）。
 
-Two transports share one request pipeline (token check → allow-list → call
-budget → dispatch under output silence → log): ``_rpc_server_loop`` serves the
-local UDS/TCP socket, ``_rpc_poll_loop`` polls a remote filesystem for request
-files via ``env.execute()``.
+双通道传输与安全准入管线：
+本地与远程两种传输共享同一套请求安全管线（Token 鉴权 → 工具白名单校验 → 调用预算配额 → 静默分派 → 日志审计）：
+1. **``_rpc_server_loop``**：监听本地 Unix Domain Socket（UDS）或 TCP 套接字；
+2. **``_rpc_poll_loop``**：通过 ``env.execute()`` 在远端文件系统轮询请求文件；
+3. **终端危险参数硬屏蔽**：禁止沙箱脚本传递 ``background``, ``pty``, ``persist_on_release`` 等控制参数。
 """
 
 import base64

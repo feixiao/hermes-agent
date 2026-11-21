@@ -1,8 +1,13 @@
-"""Child-process environment for execute_code: env scrubbing, interpreter and cwd resolution.
+"""代码执行子进程环境与凭据脱敏清洗器（Child-process Environment & Secret Scrubbing）。
 
-Both the per-call remote path and the local session kernel build their child
-env through ``_build_child_env`` so the security rules (secret scrubbing,
-PYTHONPATH hygiene, UTF-8 forcing, TZ) cannot drift between them.
+安全模型与清洗规则：
+无论远程还是本地会话内核，统一通过 ``_build_child_env`` 构筑子进程环境变量，杜绝凭据漂移泄露。
+
+【清洗顺序与准入规则】：
+1. **密钥敏感子串硬阻断（`_SECRET_SUBSTRINGS`）**：凡包含 `KEY`, `TOKEN`, `SECRET`, `PASSWORD`, `CREDENTIAL`,
+   `AUTH`, `APIKEY`, `COOKIE` 等敏感子串的环境变量全部剥离；
+2. **安全白名单前缀匹配（`_SAFE_ENV_PREFIXES`）**：仅保留 `PATH`, `HOME`, `USER`, `LANG`, `TMPDIR` 等系统运行基础变量；
+3. **严禁泛通配 `HERMES_*`**：宽泛匹配会泄露 Webhook 与配置变量，仅显式放行运行时必要的位置标记。
 """
 
 import logging

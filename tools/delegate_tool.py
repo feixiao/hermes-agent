@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""
-Delegate Tool -- Subagent Architecture
+"""子智能体代理派发体系（Delegate Tool / Subagent Architecture）。
 
-Spawns child AIAgent instances with a fresh conversation, their own task_id
-(terminal session, file-ops cache), the parent's toolsets minus child-blocked
-tools, and a focused system prompt (goal and context are the first user turn). Single-task and
-batch (parallel) modes; top-level model calls run in the background while
-orchestrator children wait for their own workers. The parent only ever sees
-the delegation call and the summary result, never the child's intermediate
-tool calls or reasoning.
+隔离模型与父子契约：
+创建独立的子 AIAgent 实例以全新上下文执行指定任务。
+
+【核心隔离与防护契约】：
+1. **多重环境隔离**：每个子智能体独享全新的会话上下文、独立的 task_id（终端会话与文件操作缓存隔离）、
+   可选的 Git Worktree 物理工作区隔离；
+2. **权限剥离与递归深度熔断**：继承父代工具集时剔除子智能体禁用工具（如严禁子智能体无界递归派发），
+   硬限递归深度；
+3. **父代无感知摘要归拢**：父智能体仅见 `delegate_task` 调用与子智能体最终归纳总结，
+   子智能体的巨量中间思考链与工具调用完全在内部消化，绝不回灌污染父代上下文窗口。
 """
 
 import logging

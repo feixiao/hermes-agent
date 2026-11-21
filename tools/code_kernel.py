@@ -1,18 +1,15 @@
-"""Session-persistent Python kernels for execute_code: one child per (owner, mode,
-interpreter, cwd, tool-set), one code cell per call, state survives across calls.
+"""跨调用持久化 Python 会话内核（Session-persistent Python Kernels for execute_code）。
 
-Constraints, in order: (1) SAME security envelope as per-call (``_build_child_env``
-scrubbing, ``_rpc_server_loop`` token + per-cell tool budget, ANSI strip + secret
-redaction) — only lifetime widens. (2) A wedged kernel dies, never hangs the agent:
-timeout/interrupt kills the process tree and drops the registry entry; state loss is
-deliberate (a cell cannot be interrupted in place safely). (3) Env frozen at spawn:
-later passthrough is invisible until ``reset=true`` (the result names the kernel).
+隔离维度与生命周期契约：
+按 `(owner, mode, interpreter, cwd, tool-set)` 五元组隔离子进程实例；单次工具调用对应单次 Code Cell 执行，
+内部变量与函数定义在多次调用间常驻保活。
 
-Wire protocol: one JSON request per stdin line ``{"id", "code"}``; replies framed on
-stdout as ``<SENTINEL> <byte-length>\\n<json>`` with a per-kernel random SENTINEL from
-the env. Bytes outside frames are raw fd output attributed to the running cell (calls
-are serialized per kernel). A forged frame can only fake its own cell result.
-Also hosts what ``tools.code_kernel_remote`` shares: owner resolution, registry, cell core.
+【核心约束与死锁熔断】：
+1. **与单次调用一致的安全沙盒**：继承完全一致的环境变量清洗、Token 鉴权、每 Cell 工具预算与密钥脱敏；
+2. **卡死内核直接物理终止，绝不挂起智能体**：超时或用户打断时，直接 kill 整个进程树并注销注册表，
+   坚决不为了状态保留而妥协稳定性；
+3. **有线帧协议（Wire Protocol）**：stdin 发送 JSON 请求 `{"id", "code"}`，stdout 采用 `<SENTINEL> <byte-length>\n<json>` 定界帧，
+   随机哨兵字符杜绝欺骗。
 """
 
 from __future__ import annotations

@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""Session Search Tool - long-term conversation recall over the SQLite session DB.
+"""跨会话历史检索工具（Session Search Tool）。
 
-Single-shape tool; the mode is inferred from the args: DISCOVERY (``query``;
-FTS5 deduped by lineage, adaptive detail hydrates only the top result),
-SCROLL (``session_id`` + ``around_message_id``; ±window around the anchor),
-READ (``session_id`` alone; whole session or head/tail), BROWSE (no args).
-No LLM calls — every shape returns actual DB messages.
+设计机制与零 LLM 检索：
+基于 SQLite SessionDB 提供低成本、端到端的历史会话记忆召回。
+统一单一工具形态，根据调用参数自动推断四种检索模式：
+1. **DISCOVERY（发现模式，传入 ``query``）**：FTS5 全文检索并按谱系链（Lineage）去重，自适应水合仅展开最高置信度结果；
+2. **SCROLL（滚动模式，传入 ``session_id`` + ``around_message_id``）**：以特定消息为锚点，展开前后滑动窗口；
+3. **READ（精读模式，仅传入 ``session_id``）**：提取完整会话或首尾关键片段；
+4. **BROWSE（浏览模式，无参数）**：列出最近的活跃会话清单。
+
+【核心不变式】：
+零 LLM 调用——所有结果均直接提取自数据库真实消息，杜绝幻觉生成。自动化 Cron 会话在 BM25 排序中被降权，避免污染交互召回。
 """
 
 import json
@@ -756,8 +761,7 @@ def session_search(query: str = "", role_filter: str | None = None, limit: int |
                    current_session_id: str | None = None, session_id: str | None = None, around_message_id: int | None = None,
                    window: int = 5, sort: str | None = None, profile: str | None = None, detail: str = "adaptive",
                    after: str | None = None, before: str | None = None, exclude_session_ids: Optional[list[str]] = None) -> str:
-    """Run session search, closing DBs opened here. Positional order is frozen for old callers;
-    new parameters are appended after ``detail``."""
+    """执行会话历史检索的主入口（自适应分派 DISCOVERY / SCROLL / READ / BROWSE 四种模式）。"""
     from hermes_constants import get_hermes_home
     from hermes_state import SessionDB, format_session_db_unavailable
     from hermes_state_registry import release_or_close

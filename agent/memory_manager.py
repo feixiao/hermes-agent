@@ -1,7 +1,15 @@
-"""MemoryManager — fans the agent's memory hooks out to registered providers.
+"""外部记忆管理器（MemoryManager）。
 
-The builtin provider is always allowed; only ONE external plugin provider may be
-registered at a time (tool-schema bloat, conflicting backends).
+架构定位与门禁设计：
+将智能体的记忆生命周期钩子（Turn 同步、预取、压缩前检查点、工具注入）分发给已注册的提供商。
+内置提供商（Builtin MemoryStore）永远可用；最多只允许挂载一个外部插件提供商（如 Honcho / Mem0），
+防止工具 Schema 膨胀以及后端冲突。
+
+【核心不变式与防雪崩门禁】：
+1. **出站递归脱敏（Redaction for Egress）**：所有发往外部插件服务的数据必须先经过 `redact_for_egress` 脱敏；
+2. **防雪崩门禁（_StuckCallGate）**：Python 线程无法被强行 terminate，外部调用一旦卡死将永久挂住线程。
+   通过全局滑动门禁（超时 8s/30s，超限 4 次阻塞，探测周期 60s，最大在途 16），防止线程池被击穿导致主进程瘫痪；
+3. **单提供商异常隔离**：任何外部插件提供商的崩溃或超时都只会被记录为日志并由系统吞掉，绝对不阻断核心会话。
 """
 
 from __future__ import annotations
@@ -144,15 +152,11 @@ def _redact_messages_for_egress(messages: Optional[list[Any]]) -> Optional[list[
 
 
 class _StuckCallGate:
-    """Process-wide admission for one kind of external provider call, keyed by (Hermes home, provider).
+    """跨会话进程级门禁：限制外部记忆提供商的慢调用并发数，防止 Python 线程池被卡死钉死。
 
-    A new MemoryManager is built per agent, so a per-instance view would let every fresh manager start
-    one more call against a hung backend and pin one more thread. Shared, the gate closes once
-    _MAX_STUCK_CALLS calls that started after the key's last successful return are past their deadline,
-    admits one half-open probe per _PROBE_INTERVAL_S while closed, and never lets more than
-    _MAX_INFLIGHT_CALLS be in flight. Calls not yet overdue are not counted, so healthy concurrent
-    sessions run side by side. Each call removes only its own entry.
-    """
+    当同一 (Hermes home, provider) 累积卡死请求达 _MAX_STUCK_CALLS (4) 时触发熔断关闭门禁；
+    门禁关闭期间每隔 _PROBE_INTERVAL_S (60s) 放行 1 个半开探测请求；
+    最大在途调用硬限 _MAX_INFLIGHT_CALLS (16)。"""
 
     def __init__(self) -> None:
         self.lock = threading.Lock()
@@ -198,11 +202,9 @@ class _StuckCallGate:
 
 
 class MemoryManager:
-    """Builtin provider (always first) plus at most one external provider.
+    """记忆提供商分派管理器（内置 MemoryStore + 最多一个外部插件提供商）。
 
-    Failures in one provider never block the other: every fan-out hook logs and
-    swallows per-provider exceptions.
-    """
+    各提供商异常完全隔离，外部提供商故障绝不阻塞主智能体正常运转。"""
 
     # External prefetch threads (#134392) and background sync_turn / queue_prefetch calls. The home is
     # part of the key because one gateway process can serve several profiles, each with its own config

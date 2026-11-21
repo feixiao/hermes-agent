@@ -1,9 +1,11 @@
-"""Thin orchestration layer over the tool registry.
+"""工具编排调度核心层（Model Tools Orchestration Layer）。
 
-Importing runs tool discovery (each tools/*.py self-registers via
-tools.registry.register()); exposes get_tool_definitions() (toolset-filtered
-schemas sent to the model) and handle_function_call() (dispatch with
-hooks/middleware) plus registry pass-throughs.
+架构定位与分派职责：
+作为连接上层大模型调用与底层 `tools.registry` 工具注册表的门面层：
+1. **自动工具发现（Tool Discovery）**：导入时触发所有内置工具模块的自注册；
+2. **Schema 动态投递（`get_tool_definitions`）**：按 Toolsets 配置过滤生成标准 JSON Schema 并发送给大模型；
+3. **统一分派与拦截管道（`handle_function_call`）**：集中处理工具参数自动矫正、鉴权审批、
+   安全审计、前后置钩子触发（Hooks）以及中间件追踪（Middleware Trace）。
 """
 
 import os
@@ -912,7 +914,7 @@ def handle_function_call(
     enabled_toolsets: Optional[list[str]] = None, disabled_toolsets: Optional[list[str]] = None,
     conversation_id: Optional[str] = None,
 ) -> str:
-    """Route a tool call through hooks/middleware to the registry; returns a JSON string.
+    """工具调用统一分派主入口：经过参数矫正、托管白名单检查、前/后置钩子与中间件管线后分发执行。
 
     task_id isolates terminal/browser sessions; user_task is forwarded to every handler as a kwarg.
     enabled_tools picks execute_code's sandbox tools (default: the process-global

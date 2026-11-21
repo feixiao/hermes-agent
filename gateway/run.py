@@ -1,7 +1,7 @@
-"""Gateway runner - entry point for messaging platform integrations.
+"""外设消息网关中枢（Gateway Runner - 25+ 消息平台接入中枢与单写权威服务宿主）。
 
-Provides ``start_gateway()`` (start all configured adapters) and ``GatewayRunner`` (lifecycle).
-Run via ``python -m gateway.run`` or ``python cli.py --gateway``."""
+核心职责：驱动 Telegram/Discord/Slack 等多端适配器生命周期，管理双向消息守卫与输入分派。
+【单写权威契约】：通过 gateway.sock 与 Epoch 租约汇聚多端并发写，彻底规避 SQLite 多端锁库风险。"""
 
 # hermes_bootstrap must be the very first import (UTF-8 stdio on Windows; no-op on POSIX).
 try:

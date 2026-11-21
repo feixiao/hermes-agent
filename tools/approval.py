@@ -1,14 +1,13 @@
-"""Dangerous command approval -- the gate flow and per-session state.
+"""纵深安全防御审批引擎（Approval Gate Flow & Session State）。
 
-Owns the session state (approvals, yolo, gateway queues, denial breaker), the three guard
-entry points (``check_all_command_guards``, ``check_execute_code_guard``,
-``request_tool_approval`` / ``_run_approval_gate``) and the shared human-decision engine
-behind them. Leaves: ``approval_detection`` (hardline/dangerous patterns), ``approval_context``
-(contextvars, config readers), ``approval_floors`` (pre-gate blocks, allowlist match),
-``approval_prompt`` (CLI prompt, plugin transports, MCP elicitation), ``approval_gateway_wait``
-(blocking gateway round-trip), ``approval_smart`` (guardian LLM), ``approval_human_wait``.
-Leaves read facade-owned state (``_lock``, queues, denial breaker) back through ``tools.approval`` at
-call time; sibling-defined names are imported from their defining module.
+架构定位与门禁流转：
+管理会话级审批状态（动态审批记录、YOLO 豁免名单、网关审批等待队列与连续拒绝熔断器），提供统一的人机协同安全关卡。
+
+【三道指令安全防线】：
+1. **``check_all_command_guards``**：终端指令综合防护网（预检黑名单 → HARDLINE 绝对禁令 → 永久白名单匹配 → 智能护栏评估）；
+2. **``check_execute_code_guard``**：PTC 编程式代码沙箱调用安全防线；
+3. **``request_tool_approval``**：通用工具人机交互式审批弹窗分派（支持 CLI、TUI、Desktop 与网关远程异步等待）；
+4. **连续拒绝熔断（Denial Breaker）**：用户连续拒绝后自动阻断后续同类请求，避免大模型死循环试探。
 """
 
 from dataclasses import dataclass

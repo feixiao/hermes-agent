@@ -1,10 +1,12 @@
-"""Per-iteration API request assembly for the conversation turn loop: build ``api_messages``
-from the transcript, append MoA context, inject prefills, run the context-engine selection
-hook and the send-time sanitizers, canonicalize for bit-perfect cache prefixes, build the
-request-local prompt-cache plan LAST (after every transcript mutation), prepare the
-persistent-MoA request, then measure request pressure. Nothing here imports
-``agent.conversation_loop`` at module level (cycle) — loop-internal helpers resolve lazily
-so ``patch("agent.conversation_loop.X")`` sites keep intercepting.
+"""回合循环中的每轮 API 请求装配切片（Step 3: Request Assembly）。
+
+核心职责与不变式：
+1. **出站副本与不可变原始记录**：从内存 transcript 派生出装配专用的 ``api_messages`` 与 ``tools_for_api``
+   （携带发送期临时修饰），严禁直接原地污染规范的 ``messages`` 列表；
+2. **前缀缓存（Prefix Cache）字节级保全**：仅在空白字符规范化、孤儿 ToolCall 清洗、纯思维链过滤、
+   User 消息合并与非法代理对（surrogates）剥离之后，最后一步计算提示词缓存断点；
+3. 上下文引擎动态筛选挂钩（Per-turn context selection hook）与 MoA 上下文聚合；
+4. 准确度量装配后的请求上下文压力（Request Pressure Tokens）以便后续安全裁决。
 """
 
 from __future__ import annotations
@@ -24,9 +26,10 @@ logger = logging.getLogger("agent.conversation_loop")
 
 @dataclass
 class AssembledRequest:
-    """Always ``action == "fallthrough"``; the fields are the iteration locals the assembly
-    produces (``api_messages``/``tools_for_api`` are the decorated request copies — the
-    canonical ``messages``/``agent.tools`` stay undecorated)."""
+    """API 请求装配产物数据类。
+
+    ``api_messages`` 与 ``tools_for_api`` 为装饰后的出站请求副本，
+    底层的规范 ``messages`` 和 ``agent.tools`` 保持纯净不变。"""
 
     action: str
     api_messages: Any
@@ -109,9 +112,10 @@ def assemble_api_request(
     _plugin_user_context: Any, moa_config: Any, active_system_prompt: Any,
     original_user_message: Any, pending_moa_prepared_request: Any, request_logger: Any,
 ) -> AssembledRequest:
-    """Assemble the request in the original order. ORDER IS LOAD-BEARING: cache breakpoints
-    are injected only after whitespace normalization, the orphan sweep, thinking-only drop /
-    user merge and surrogate stripping, so the same row's bytes never vary across turns."""
+    """装配单轮 API 调用载荷。
+
+    【核心不变式】：装配顺序具有强约束性！前缀缓存断点（Cache Breakpoints）必须在
+    所有文本清洗与清洗钩子执行完毕后最后计算，确保跨回合相同前缀字节绝对一致。"""
     from agent.conversation_loop import (
         _CODEX_INCOMPLETE_NUDGE, _apply_context_engine_selection, _canonicalize_api_tool_calls,
         _clone_message_for_send, _midturn_request_pressure_tokens, _pressure_with_real_floor,

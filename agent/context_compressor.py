@@ -1,5 +1,6 @@
-"""Automatic context window compression: a cheap auxiliary model summarizes middle turns while head and
-tail are protected (iterative summaries, token-budget tail, tool-output pruning first, scaled budgets)."""
+"""上下文自动压缩引擎（ContextCompressor）：副模型提取中间轮次摘要，保护首尾（工具修剪优先/阶梯预算）。
+
+四阶段机制：1.首轮陈旧工具修剪；2.Head首轮与Tail活跃区预算保护；3.超时/异常确定性截断平滑降级；4.成对清洗孤儿ToolCall。"""
 
 import contextlib
 import contextvars
@@ -2141,8 +2142,7 @@ class ContextCompressor(
     SummaryDispatchMixin, SummaryInputSamplingMixin, PreLlmSkipMixin, CompressionTelemetryMixin, MicroCompactionMixin,
     ProactivePruneMixin, CompactionWindowMixin, ContextEngine,
 ):
-    """Default context engine: prune tool results, protect head/tail, summarize the middle
-    with an LLM, and iteratively update the previous summary on later compactions."""
+    """默认上下文压缩引擎：修剪工具输出、保护首尾、使用副模型提炼中间对话摘要并迭代更新。"""
 
     @property
     def name(self) -> str:

@@ -1,7 +1,14 @@
-"""Dangerous-command detection: normalization, tokenizing, and pattern tables.
+"""高危指令与 HARDLINE 禁令检测引擎（Dangerous-Command Detection）。
 
-Pure command classification for :mod:`tools.approval` — no approval state, config reads, or
-prompting live here.
+架构定位与纯函数分类：
+负责针对待执行 Shell / Terminal 指令进行静态 AST 词法切分、空白规范化与高危模式表匹配。
+
+【核心不变式与安全红线】：
+1. **绝对禁令（HARDLINE Hard Block）**：定义了物理级不可豁免的绝对高危模式（如 `rm -rf /`, 擦除根分区、
+   非受信远程脚本管道直执行 `curl | bash` 等），即使开启 `--yolo` 极速模式也**绝对禁止执行**（Fail-Closed）；
+2. **规范化归一识别**：在检测前自动将 `~`, `$HOME`, `$HERMES_HOME` 等各种多态写法折叠归一化，
+   防止黑客通过相对路径或变量拼接绕过敏感目录匹配；
+3. **纯函数无状态设计**：不读取外部配置，不执行终端交互，保证检测结果纯粹、可复现与高可测试性。
 """
 
 import bisect

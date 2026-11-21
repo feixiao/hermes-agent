@@ -1,5 +1,5 @@
-"""Configuration management for Hermes Agent: config.yaml / .env loading, saving,
-validation, migration, and the ``hermes config`` command."""
+"""Hermes 全局配置管理中枢（加载/保存 config.yaml、.env，校验、平滑迁移与 6 级配置合并）。
+【核心规则】：优先级按 CLI 参数 > 环境变量 > Profile 配置 > 全局配置 > 默认值层层覆盖，写回原子落盘。"""
 
 # Stale-module bridge — must run before ANY import below can bind a root-level symbol.
 # A pre-handoff updater purges only package prefixes after the pull, so a root module

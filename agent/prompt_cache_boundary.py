@@ -1,12 +1,15 @@
-"""Builder-declared stable prefixes for Anthropic prompt caching.
+"""Anthropic 提示词缓存边界声明器（Prompt Cache Boundary）。
 
-Skill/webhook/cron builders concatenate a large static scaffold with a small volatile
-tail into one user-message string. Only the builder knows where the tail begins, so it
-registers the stable prefix here and the cache planner places a breakpoint at that
-boundary. Re-parsing marker strings at request time is deliberately avoided: markers
-can legitimately appear inside skill bodies, and any delimiter heuristic then shrinks
-the cached prefix or absorbs volatile bytes. Process-local by design: any miss falls
-back to the whole-message policy.
+设计动机与不变式：
+Skill / Webhook / Cron 调度器经常将巨大的静态脚手架（Scaffold）与微小的易变动态尾部（Tail）
+拼接为单条 User 消息。仅有构建器知道静态前缀与动态尾部的切分点。
+因此，构建器将稳定静态前缀注册到本模块，缓存规划器（Cache Planner）即可精准在边界放置断点。
+
+【核心不变式】：
+1. **避免运行时重新标记解析**：严禁在请求时通过特殊分隔符二次扫描（分隔符可能合法存在于技能体中，
+   易导致前缀误缩减或污染易变字节）；
+2. **非空尾部约束**：前缀切分后的 Tail 必须包含非空白字符，防止生成空 TextBlock 导致 Anthropic HTTP 400 拒绝；
+3. **LRU 缓存保活**：高频 Cron 脚手架在命中时刷新 LRU，防止被突发一次性技能调用驱逐。
 """
 
 import threading
@@ -24,7 +27,7 @@ _prefixes: OrderedDict[str, None] = OrderedDict()
 
 
 def register_stable_prefix(prefix: str) -> None:
-    """Record ``prefix`` as the stable scaffold of a just-built message."""
+    """将 ``prefix`` 注册为刚构建消息的稳定静态脚手架（线程安全）。"""
     if not prefix:
         return
     with _lock:
@@ -37,13 +40,10 @@ def register_stable_prefix(prefix: str) -> None:
 
 
 def find_stable_prefix(content: str) -> Optional[str]:
-    """Longest registered *proper* prefix of ``content`` with a non-whitespace tail.
+    """在 ``content`` 中查找已注册的最长稳定真前缀（要求尾部包含非空白字符）。
 
-    The tail must be non-whitespace so the split never yields an empty text
-    block (Anthropic rejects it with HTTP 400). A hit refreshes the entry's LRU
-    position so a scaffold fired every minute by cron is not evicted by a
-    burst of one-off skill invocations.
-    """
+    尾部必须包含非空白字符，确保切分后的动态部分不会变为空文本块
+    （Anthropic 会以 HTTP 400 拒绝空文本块）。命中时刷新 LRU 位置。"""
     with _lock:
         best: Optional[str] = None
         for prefix in _prefixes:

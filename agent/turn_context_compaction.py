@@ -1,11 +1,15 @@
-"""Turn-start compaction for ``build_turn_context`` plus the small compression-attempt
-helpers shared with the pre-API / post-tool sites in ``turn_preflight``.
+"""回合前置上下文压缩切片（Step 7 & Turn-Start Compaction）。
 
-Three passes, in order: idle-triggered compaction (opt-in, wall-clock gap), preflight
-context compression (token threshold), and the uncompressed-session overflow-warning
-re-arm. ``run_turn_start_compaction`` mutates ``agent`` exactly as the inline prologue
-did and returns a ``CompactionOutcome``. Predicates/estimators that tests patch on
-``agent.turn_context`` are imported lazily through that module so patches intercept."""
+架构职责与执行流转：
+在回合开始（``build_turn_context``）及 API 调用前执行上下文压缩，分为三道顺序关卡：
+1. 空闲时间触发压缩（Idle-Triggered Compaction，根据上次活跃时间跨度静默触发）；
+2. 前置上下文超限压缩（Preflight Context Compression，检测当前 Token 消耗是否突破阈值）；
+3. 未压缩会话溢出告警重置（Uncompressed-Session Overflow-Warning Re-arm）。
+
+【核心不变式】：
+若压缩引擎重建了 ``messages`` 列表，必须通过 ``_reanchor`` 重新计算当前回合的用户消息索引
+（``current_turn_user_idx``），确保后续落盘与旁路注入准确锚定。
+"""
 
 from __future__ import annotations
 
@@ -25,8 +29,9 @@ logger = logging.getLogger("agent.turn_context")
 
 @dataclass
 class CompactionOutcome:
-    """Locals rebuilt by turn-start compaction (``build_turn_context`` reads them back)."""
+    """回合上下文压缩产物数据类。
 
+    记录压缩后的消息列表、当前生效系统提示词、重新锚定的用户消息索引及压缩执行状态。"""
     messages: list[dict[str, Any]]
     active_system_prompt: Optional[str]
     conversation_history: Optional[list[dict[str, Any]]]
@@ -131,7 +136,7 @@ def run_turn_start_compaction(
     active_system_prompt: Optional[str], conversation_history: Optional[list[dict[str, Any]]],
     current_turn_user_idx: int, user_message: Any, effective_task_id: str,
 ) -> CompactionOutcome:
-    """Idle compaction, then preflight compression (or the uncompressed guard)."""
+    """执行回合开始时的两级前置检查：空闲触发压缩与超限压缩。"""
     out = CompactionOutcome(
         messages=messages, active_system_prompt=active_system_prompt,
         conversation_history=conversation_history, current_turn_user_idx=current_turn_user_idx,

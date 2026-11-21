@@ -1,9 +1,10 @@
-"""Post-call response verification for the conversation turn's retry loop: stop the thinking
-spinner, validate the response shape (retry / eager fallback / terminal invalid-response
-result), derive ``finish_reason`` per api_mode, route content-policy refusals and
-``length`` truncation, fold usage into the compressor, and mark the logical relay call
-complete. Nothing here imports ``agent.conversation_loop`` at module level (cycle) —
-loop-internal helpers resolve lazily so ``patch("agent.conversation_loop.X")`` keeps intercepting.
+"""回合循环中的模型响应校验切片（Step 5: Response Check）。
+
+核心职责与不变式：
+1. **响应合法性校验与自愈**：检测空响应、纯思维链无内容死循环、截断异常与内容策略拒绝；
+2. **重试与平滑降级（Fallback）**：针对无效响应触发带指数退避的重试或自动无缝切换到备用模型链；
+3. **Token 使用量核算（Usage Fold）**：将模型返回的实际使用量记入上下文压缩器统计，更新前置压缩压力；
+4. 提取各厂商规范化 ``finish_reason``（例如针对 Codex `incomplete` 与 OpenAI `length` 的不同路由）。
 """
 
 from __future__ import annotations
@@ -24,9 +25,12 @@ logger = logging.getLogger("agent.conversation_loop")
 
 @dataclass
 class ResponseCheckVerdict:
-    """``action``: ``"break"`` (leave the retry loop — success, or a fallback/refusal restart
-    armed on ``_retry``), ``"continue"`` (retry the API call) or ``"return"`` (``result`` is
-    the turn's result dict). The other fields are the retry-loop locals rebound."""
+    """响应校验裁决对象。
+
+    ``action`` 取值：
+    - ``"break"``: 跳出重试循环（响应有效，或已触发备用模型切换/拒绝重启）
+    - ``"continue"``: 触发同轮 API 重试
+    - ``"return"``: 致命错误直接结束回合并返回终态结果 dict"""
 
     action: str
     thinking_spinner: Any
@@ -98,9 +102,10 @@ def check_api_response(
     api_request_id: Any, api_start_time: Any, effective_task_id: Any, turn_id: Any,
     _preflight_compression_blocked: Any, _last_preflight_pressure: Any,
 ) -> ResponseCheckVerdict:
-    """Verify ``response`` in the original order. The retry buffer is NOT cleared on success
-    (bytes back != usable content); ``_preflight_compression_blocked``/``_last_preflight_pressure``
-    reset only when the usage fold re-arms the compression budget."""
+    """按原始调用顺序校验模型响应并决定重试或流转策略。
+
+    【核心不变式】：成功返回时并不清空重试缓存区，唯有在使用量核算重新计算出健康的上下文预算后，
+    才会重置 ``_preflight_compression_blocked`` 状态。"""
     from agent.turn_recovery import validate_response_shape
 
     def _verdict(action: str, result: Optional[dict[str, Any]] = None) -> ResponseCheckVerdict:

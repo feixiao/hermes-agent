@@ -1,8 +1,13 @@
-"""Anthropic Messages API adapter: client construction + the Messages call for Hermes's
-OpenAI-style internals. Auth: Console API keys (``sk-ant-api*``/``-usr*``/``-svc*``/``-admin*``) ->
-x-api-key; OAuth setup-tokens (``sk-ant-oat*``) and Claude Code credentials -> Bearer + beta header.
-Endpoint predicates, payload conversion and credentials live in ``agent/anthropic_{endpoints,
-message_convert,credentials}.py``; import them from there."""
+"""Anthropic 协议出站适配器（Anthropic Messages API Adapter）。
+
+设计机制与规范中间表示（Canonical IR）：
+将 Hermes 内部标准的 OpenAI 风格消息历史与 Tool 规范转换为 Anthropic 原生 Messages API 载荷。
+
+【多模式适配与凭据】：
+1. **双认证管道**：支持控制台 API Key（`sk-ant-api*` 等转为 `x-api-key`）与 OAuth Setup-Token（转为 Bearer + Beta 头）；
+2. **无缝热切换**：通过规范中间表示解耦底层提供商差异，使得会话中途无缝切换不同厂商大模型而无需破坏历史；
+3. **延迟依赖加载**：`anthropic` SDK 采用按需懒加载，避免冷启动时产生 200ms+ 的无谓导入开销。
+"""
 
 from pm import install_hint
 import logging

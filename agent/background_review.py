@@ -1,9 +1,14 @@
-"""Background memory/skill review — fork the agent to evaluate the turn. After every turn
-``AIAgent.run_conversation`` may spawn a daemon thread that replays the conversation snapshot in a
-forked :class:`AIAgent` and asks "should any skill/memory be saved or updated?". Writes go
-straight to the memory + skill stores; the main conversation and prompt cache are never touched.
-The fork inherits the parent's live runtime (provider, model, credentials, cached system prompt)
-so it hits the same prefix cache, and runs under a dispatch-side tool whitelist."""
+"""后台记忆与技能审查引擎（Background Review / Turn Evaluation Fork）。
+
+设计机制与独立分支：
+在回合结束后，主智能体可启动守护线程，在 Fork 分支的 :class:`AIAgent` 副本中重放会话快照，
+评估当前交互是否包含需要长期沉淀的技能或记忆。
+
+【核心不变式】：
+1. **主会话与缓存零干扰**：所有新技能/记忆直接写入持久化存储，绝不修改主会话历史，也不破坏主会话的前缀缓存；
+2. **继承父代运行时**：Fork 分支继承相同的运行时凭据、模型与 System Prompt，享有相同的提供商前缀缓存命中率；
+3. **工具调度白名单**：Fork 分支在受限白名单下运行，严禁调用带破坏性副作用的外部工具。
+"""
 
 from __future__ import annotations
 

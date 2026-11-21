@@ -1,10 +1,13 @@
-"""Base class for all Hermes execution environment backends.
+"""执行沙箱环境基类（Base Class for Hermes Execution Environments）。
 
-Unified spawn-per-call model: every command spawns a fresh ``bash -c`` process.
-A session snapshot (env vars, functions, aliases) is captured once at init and
-re-sourced before each command. CWD persists via in-band stdout markers (remote)
-or a temp file (local). Cohesive pieces live in sibling modules (``base_output``,
-``base_session_env``, ``base_wait``, ``path_utils``).
+统一模型与会话快照机制：
+采用统一的“单次调用单次派生”（Spawn-Per-Call）模型：每次命令执行均派生独立的全新 `bash -c` 子进程。
+
+【核心不变式】：
+1. **会话环境变量快照（Session Snapshot）**：初始化时捕获一次环境变量、自定义函数与别名快照，
+   并在每次指令执行前重新 source 生效，实现类似有状态 shell 的连贯体验；
+2. **工作目录持久化（CWD Tracking）**：通过带内 stdout 标记或本地临时文件追踪 `cd` 变动，跨命令保持工作目录；
+3. **多后端统一抽象**：为 Local（本地）、Docker（容器）、SSH 等提供一致的执行与中断生命周期契约。
 """
 
 import contextvars

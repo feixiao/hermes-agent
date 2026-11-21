@@ -1,7 +1,6 @@
 # health: allow FILE_LINES -- security fix for #82010: distinguish an explicitly-empty toolset allowlist (fail closed, nothing allowed) from an absent one (no restriction); the added lines are minimal fail-closed branches at this existing chokepoint. Also #141468: match the `mcp-<server>` toolset spelling so a narrow job's MCP allowlist is not widened into every enabled server — a minimal branch at the same chokepoint.
-"""Cron job scheduler: tick() runs due jobs (gateway calls it every 60s from a background thread).
-A file lock (~/.hermes/cron/.tick.lock) keeps overlapping processes to one tick at a time.
-"""
+"""定时任务调度器（Cron Scheduler）：``tick()`` 定期执行到期任务（网关后台线程每 60 秒轮询）。
+【文件锁排他不变式】：通过文件锁（.tick.lock）防止重叠进程并发执行，保持单实例滴答。"""
 
 import atexit
 import concurrent.futures

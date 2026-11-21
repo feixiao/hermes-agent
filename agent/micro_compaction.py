@@ -1,8 +1,15 @@
-"""Micro-compaction mixin for ContextCompressor.
+"""微压缩混入类（Micro-Compaction Mixin for ContextCompressor）。
 
-Rolling per-exchange summarization that folds old user/assistant exchanges into a single
-summary marker between turns. OFF by default: every pass rewrites the prompt prefix and
-breaks the provider prompt cache.
+设计动机与架构权衡：
+提供回合间滚动式单轮对话折叠（Rolling Per-Exchange Summarization），将已结束的历史
+user/assistant 交互及其冗长工具输出就地替换为轻量级摘要标记块（Summary Marker）。
+
+【核心不变式与权衡】：
+1. **默认禁用（OFF by default）**：每次微压缩都会就地改写提示词前缀，破坏提供商的 Prefix Cache。
+   主要适用于长周期交互、高频工具输出且对缓存成本不敏感的场景；
+2. **游标与会话断点自愈**：通过 ``_resolve_compact_cursor`` 记录吸收进度游标，并在会话恢复时从历史
+   Marker 标记中无缝反序列化重建滚动摘要，避免全量重新汇总；
+3. **工具配对完整性保全**：折叠历史交互时，若涉及工具调用必须保证 tool_calls 与 tool 结果成对吸收。
 """
 from __future__ import annotations
 
@@ -37,8 +44,7 @@ def _is_micro_marker(entry: Any) -> bool:
 
 
 class MicroCompactionMixin:
-    """Rolling micro-compaction; host must be a ``ContextCompressor``."""
-
+    """滚动式微压缩混入类；必须被 ``ContextCompressor`` 类继承混入。"""
     def _resolve_compact_cursor(self, messages: list[dict[str, Any]], head_end: int, tail_start: int) -> int:
         """Index of the first message not yet absorbed into the rolling summary: the in-memory
         cursor when valid, else just past the last summary marker."""

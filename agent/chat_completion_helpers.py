@@ -1,11 +1,10 @@
-"""API-call helpers extracted from :class:`AIAgent`: non-streaming and streaming
-request drivers, request kwargs builder, assistant-message materializer,
-provider-fallback activator, max-iterations handler, per-turn resource cleanup.
+"""AIAgent API 底层调用辅助模块（流式/非流式驱动器、请求组装、备用模型回退与资源清理）。
 
-Each function takes the parent ``AIAgent`` as ``agent``; AIAgent keeps thin
-forwarders. Symbols tests patch on ``run_agent`` (``cleanup_vm`` /
-``cleanup_browser``) are resolved through :func:`_ra` at call time.
-"""
+核心职责与物理安全：作为 AIAgent 门面的底层委托，驱动 HTTP/SSE 流式请求，并在异常时激活 Fallback 链。
+
+【FD 强杀安全不变式】：
+流式调用超时或用户打断时，对失效套接字执行 ``shutdown(SHUT_RDWR)`` 唤醒读线程让属主安全解包；
+严禁在外部监控线程直接调用 ``close()``，防止内核提前回收文件描述符引发 SSL BIO 竞态损坏。"""
 
 from __future__ import annotations
 

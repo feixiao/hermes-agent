@@ -1,8 +1,18 @@
-"""MemoryStore — bounded, file-backed curated memory (MEMORY.md / USER.md).
-Entries are joined by ``ENTRY_DELIMITER``; budgets are in chars (model-independent).
-Module state that tests monkeypatch (``get_memory_dir``, ``fcntl``/``msvcrt``) stays
-in ``tools.memory_tool`` and is read lazily."""
+"""有界文件存储记忆核心（MemoryStore — MEMORY.md / USER.md）。
 
+设计哲学与字符预算硬约束：
+放弃膨胀易失真的复杂向量数据库，采用轻量化、有界字符预算的 Markdown 文件存储。
+条目之间以特殊符号 ``ENTRY_DELIMITER``（`§`）隔离锚定。
+
+【核心不变式】：
+1. **字符预算硬限（Character Limit Hard Cap）**：
+   - `memory_char_limit`: 默认 2200 字符；
+   - `user_char_limit`: 默认 1375 字符；
+   超出预算必须由模型主动提炼合并（Consolidate），拒绝无限膨胀；
+2. **跨平台文件锁（File Locking）**：Unix 使用 `fcntl`，Windows 使用 `msvcrt`，保证多进程并发读写无冲突；
+3. **单回合重试熔断防死循环**：单回合内允许最多 3 次合并失败重试（`_MAX_CONSOLIDATION_FAILURES_PER_TURN = 3`），
+   超限后直接返回终态终止继续调用，保证必须回复用户，绝不挂死在循环中。
+"""
 import itertools
 import logging
 import os
@@ -175,10 +185,10 @@ def _stale_entry_message(entry: str) -> str:
 
 
 class MemoryStore:
-    """Bounded curated memory with file persistence; one instance per AIAgent.
-    ``_system_prompt_snapshot`` is frozen at load time (prefix-cache stable);
-    ``memory_entries`` / ``user_entries`` are live state persisted to disk."""
+    """有界记忆文件存储核心类（每个 AIAgent 独享一个实例）。
 
+    ``_system_prompt_snapshot`` 在会话加载时冻结；
+    ``memory_entries`` / ``user_entries`` 为当前内存活跃状态并持久化到磁盘。"""
     # Failed consolidation attempts (overflow / zero-match) allowed per turn before
     # a TERMINAL "save skipped" result, so a fragile replace/add can't loop the turn
     # to budget exhaustion and suppress the user's reply.
@@ -221,10 +231,8 @@ class MemoryStore:
             "The fact can be saved in a later turn.")}
 
     def load_from_disk(self):
-        """Load MEMORY.md / USER.md and capture the frozen system-prompt snapshot.
-        Threat hits are replaced by a ``[BLOCKED: …]`` placeholder in the SNAPSHOT only;
-        live lists keep the raw text so the user can see and remove poisoned entries
-        (dropping them silently would hide the attack)."""
+        """从磁盘加载 MEMORY.md / USER.md 并捕获冻结的系统提示词快照。
+        命中的威胁模式将在快照中被替换为 ``[BLOCKED: …]`` 占位符，磁盘保留原样便于审计。"""
         from tools.threat_patterns import scan_for_threats
         from tools.hosted_tool_policy import host_feature_enabled
         if not host_feature_enabled("builtin_memory"):

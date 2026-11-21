@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Async (background) delegation registry behind ``delegate_task(background=true)``.
+"""异步后台子智能体注册中心（Async Delegation Registry）。
 
-The parent dispatches a subagent on a module-level daemon executor and returns a handle
-immediately. On completion a ``type="async_delegation"`` event (self-contained task-source
-block) is pushed onto the SHARED ``process_registry.completion_queue`` the CLI/gateway drain
-while idle, so results surface as a NEW turn (never mid-turn) and inherit its de-dup and
-crash-recovery wiring. Only the async lifecycle lives here; the child run is an injected ``runner``."""
+并发模型与结果事件通知：
+支持 ``delegate_task(background=true)``：父智能体将子任务派发至守护线程池并立即返回句柄。
+
+【核心事件投递不变式】：
+子任务完成时，生成 ``type="async_delegation"`` 的自包含结果事件，推入全局共享的
+``process_registry.completion_queue``。主 CLI 或网关在回合空闲时将其消费为**全新的一轮回合输入**，
+严禁在当前回合中途突发插入打乱状态机。
+"""
 
 from __future__ import annotations
 

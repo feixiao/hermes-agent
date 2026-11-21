@@ -1,8 +1,17 @@
 #!/usr/bin/env python3
-"""SQLite state store for Hermes Agent: session metadata, message history, model
-config, FTS5 search. WAL mode (concurrent readers + one writer); compression
-splits sessions via parent_session_id chains; sessions are source-tagged
-('cli', 'telegram', ...). Batch-runner / RL trajectories live elsewhere.
+"""Hermes 核心状态持久化层（SessionDB / SQLite State Store）。
+
+架构定位与存储机制：
+基于 SQLite 的集中式会话持久化引擎：存储会话元数据、完整消息历史、模型配置与 FTS5 全文检索倒排索引。
+
+【核心不变式与自愈机制】：
+1. **WAL 模式读写分离**：启用 Write-Ahead Logging（WAL）模式，支持高并发多线程读与单一主写连接；
+2. **会话压缩谱系链（Lineage Chain）**：长会话压缩后派生出新会话，通过 `parent_session_id` 构筑完整溯源链；
+3. **多层超时与争用退避（Write-Contention Tuning）**：
+   - 核心会话 Transcript 写入配置高耐受超时（`_TRANSCRIPT_WRITE_PATIENCE_S = 60.0s`），失败直接熔断回合；
+   - 观测性心跳采用亚秒级极速超时（`_ACTIVITY_WRITE_PATIENCE_S = 0.5s`），争用时自然放弃避免阻塞主调用；
+4. **损坏自愈转储（Divert Transcript JSONL）**：检测到底层数据库或 WAL 文件损坏时，自动将内存 transcript
+   以原子 JSONL 形式分流备份，拒绝静默丢数据并自动尝试重置自愈。
 """
 
 import asyncio
@@ -480,8 +489,7 @@ class SessionDB(
     SessionMessagesMixin, SessionPruneRewriteMixin, SessionApiContentMixin, SessionCoverageMixin, SessionRewindMixin, SessionProfileRepairMixin,
     SessionPromptRefreshMixin,
 ):
-    """SQLite-backed session storage with FTS5 search; many reader threads, one writer (WAL)."""
-
+    """SQLite 会话持久化核心类（组合 17 个 Mixin，支持 WAL 并发读写与 FTS5 全文索引）。"""
     # Only these state-owned producers join automatic stale-open reconciliation; messaging/UI
     # sources have their own lifecycle owners; unknown sources fail closed.
     # See #60609.  `recovered` = placeholders `hermes sessions recover` synthesizes for
